@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/api/mood`, {
+    const response = await fetch(`${API_URL}/mood`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

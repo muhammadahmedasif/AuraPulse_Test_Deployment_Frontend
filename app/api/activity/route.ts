@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/api/activity`, {
+    const response = await fetch(`${API_URL}/activity`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/api/activity`, {
+    const response = await fetch(`${API_URL}/activity`, {
       method: "GET",
       headers: {
         Authorization: token,

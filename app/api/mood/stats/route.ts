@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "week";
 
-    const response = await fetch(`${API_URL}/api/mood/stats?period=${period}`, {
+    const response = await fetch(`${API_URL}/mood/stats?period=${period}`, {
       method: "GET",
       headers: {
         Authorization: token,

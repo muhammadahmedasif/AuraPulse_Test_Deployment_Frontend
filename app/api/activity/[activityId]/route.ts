@@ -16,7 +16,7 @@ export async function DELETE(
   try {
     const { activityId } = params;
 
-    const response = await fetch(`${API_URL}/api/activity/${activityId}`, {
+    const response = await fetch(`${API_URL}/activity/${activityId}`, {
       method: "DELETE",
       headers: {
         Authorization: token,

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const queryString = searchParams.toString();
 
-    const response = await fetch(`${API_URL}/api/mood/history${queryString ? `?${queryString}` : ''}`, {
+    const response = await fetch(`${API_URL}/mood/history${queryString ? `?${queryString}` : ''}`, {
       method: "GET",
       headers: {
         Authorization: token,

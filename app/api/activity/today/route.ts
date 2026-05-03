@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/api/activity/today`, {
+    const response = await fetch(`${API_URL}/activity/today`, {
       method: "GET",
       headers: {
         Authorization: token,
