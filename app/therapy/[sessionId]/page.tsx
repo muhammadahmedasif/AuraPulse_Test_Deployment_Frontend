@@ -139,6 +139,15 @@ export default function TherapyPage() {
   useEffect(() => {
     const loadHistory = async () => {
       if (!sessionId || sessionId === "new") {
+        // If we're coming to "new" session, check for prefill in URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const prefill = searchParams.get("prefill");
+        if (prefill) {
+          setMessage(prefill);
+          // Clear query param
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+        
         setMessages([]);
         setIsLoading(false);
         return;
@@ -170,27 +179,18 @@ export default function TherapyPage() {
         setIsLoading(false);
       }
     };
-
     if (mounted) {
+      // Skip loading history if we just transitioned from "new" and already have messages
+      if (sessionId !== "new" && messages.length > 0) {
+        setIsLoading(false);
+        return;
+      }
       loadHistory();
     }
   }, [sessionId, mounted]);
 
-  const handleNewSession = async () => {
-    try {
-      setIsLoading(true);
-      const newSessionId = await createChatSession();
-
-      // Update session list to include the new one immediately
-      const allSessions = await getAllChatSessions();
-      setSessions(allSessions);
-
-      router.push(`/therapy/${newSessionId}`);
-    } catch (error) {
-      console.error("Failed to create new session:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleNewSession = () => {
+    router.push("/therapy/new");
   };
 
   const handleDeleteSession = async (e: React.MouseEvent, idToDelete: string) => {
@@ -232,11 +232,30 @@ export default function TherapyPage() {
       return;
     }
 
+    let activeSessionId = sessionId;
+
     setMessage("");
     setIsThinking(true);
 
     try {
-      // Add user message
+      // 1. If it's a new session, create it in DB first
+      if (sessionId === "new") {
+        try {
+          const newId = await createChatSession();
+          activeSessionId = newId;
+          // Update URL without full page reload to the real ID
+          window.history.replaceState(null, "", `/therapy/${newId}`);
+          
+          // Refresh sidebar in background
+          getAllChatSessions().then(setSessions).catch(console.error);
+        } catch (error) {
+          console.error("Failed to initialize session:", error);
+          setIsThinking(false);
+          return;
+        }
+      }
+
+      // Add user message to UI
       const userMessage: ChatMessage = {
         role: "user",
         content: currentMessage,
@@ -254,7 +273,7 @@ export default function TherapyPage() {
         },
       ]);
 
-      const response = await sendChatMessageStream(sessionId, currentMessage);
+      const response = await sendChatMessageStream(activeSessionId, currentMessage);
       if (!response.body) throw new Error("No response body");
 
       const reader = response.body.getReader();
@@ -388,35 +407,12 @@ export default function TherapyPage() {
       activity: { type, title, description },
     });
   };
-  const handleSuggestedQuestion = async (text: string) => {
-    let currentSessionId = sessionId;
-
-    if (!currentSessionId || currentSessionId === "new") {
-      try {
-        setIsLoading(true);
-        currentSessionId = await createChatSession();
-        // Update session list
-        const allSessions = await getAllChatSessions();
-        setSessions(allSessions);
-        // Navigation will happen, but we can also set message state before
-        setMessage(text);
-        router.push(`/therapy/${currentSessionId}`);
-        // We don't need to manually trigger submit here because the user is now in a new session
-        // They can just click send, or we can auto-submit after navigation in a useEffect
-        return;
-      } catch (error) {
-        console.error("Failed to create session for suggested question:", error);
-        setIsLoading(false);
-        return;
-      }
+  const handleSuggestedQuestion = (text: string) => {
+    if (sessionId === "new") {
+      setMessage(text);
+    } else {
+      router.push(`/therapy/new?prefill=${encodeURIComponent(text)}`);
     }
-
-    setMessage(text);
-    // Submit the form
-    setTimeout(() => {
-      const event = new Event("submit") as unknown as React.FormEvent;
-      handleSubmit(event);
-    }, 0);
   };
 
   const handleCompleteSession = async () => {

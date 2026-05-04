@@ -413,9 +413,9 @@ export default function Home() {
                 if (currentStep < welcomeSteps.length - 1) {
                   setCurrentStep((c) => c + 1);
                 } else {
+                  router.push("/therapy/new");
                   setShowDialog(false);
                   setCurrentStep(0);
-                  // Here you would navigate to the chat interface
                 }
               }}
               className="relative group px-6"
