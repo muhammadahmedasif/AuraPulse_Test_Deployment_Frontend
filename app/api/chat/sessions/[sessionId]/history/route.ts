@@ -18,7 +18,6 @@ export async function GET(
       );
     }
 
-    console.log(`Getting chat history for session ${sessionId}`);
 
     const response = await fetch(
       `${BACKEND_API_URL}/chat/sessions/${sessionId}/history`,
@@ -42,7 +41,6 @@ export async function GET(
     }
 
     const data = await response.json();
-    console.log("Chat history retrieved successfully.");
 
     return NextResponse.json(data);
   } catch (error) {

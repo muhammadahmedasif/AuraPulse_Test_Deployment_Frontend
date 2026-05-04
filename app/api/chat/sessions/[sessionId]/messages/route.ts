@@ -26,7 +26,6 @@ export async function POST(
       );
     }
 
-    console.log(`Sending message to session ${sessionId}:`, message);
     const response = await fetch(
       `${BACKEND_API_URL}/chat/sessions/${sessionId}/messages`,
       {

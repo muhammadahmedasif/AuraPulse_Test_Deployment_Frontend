@@ -1,15 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
-  Heart,
   Menu,
   X,
   MessageCircle,
   AudioWaveform,
   LogOut,
-  LogIn,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,35 +18,58 @@ import { useSession } from "@/lib/contexts/session-context";
 export function Header() {
   const { isAuthenticated, logout, user } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  console.log("Header: Auth state:", { isAuthenticated, user });
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
   const navItems = [
     { href: "/features", label: "Features" },
     { href: "/about", label: "About AuraPulse" },
   ];
 
+  const closeMenu = () => setIsMenuOpen(false);
+
   return (
     <div className="w-full fixed top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="absolute inset-0 border-b border-primary/10" />
-      <header className="relative max-w-6xl mx-auto px-4">
+
+      <header ref={menuRef} className="relative max-w-6xl mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          <Link
-            href="/"
-            className="flex items-center space-x-2 transition-opacity hover:opacity-80"
-          >
+
+          {/* LOGO */}
+          <Link href="/" className="flex items-center space-x-2 transition-opacity hover:opacity-80">
             <AudioWaveform className="h-7 w-7 text-primary animate-pulse-gentle" />
             <div className="flex flex-col">
               <span className="font-semibold text-lg bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                 AuraPulse
               </span>
               <span className="text-xs dark:text-muted-foreground">
-                Your mental health Companion{" "}
+                Your mental health Companion
               </span>
             </div>
           </Link>
 
+          {/* RIGHT */}
           <div className="flex items-center gap-4">
+
+            {/* DESKTOP NAV */}
             <nav className="hidden md:flex items-center space-x-1">
+
+              {/* FEATURES + ABOUT (RESTORED UNDERLINE) */}
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -59,105 +80,132 @@ export function Header() {
                   <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
                 </Link>
               ))}
+
+              {/* PROFILE (UNDERLINE RESTORED) */}
               {isAuthenticated && (
                 <Link
                   href="/profile"
                   className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors relative group flex items-center gap-2"
                 >
                   {user?.profileImage ? (
-                    <img src={user.profileImage} alt="" className="w-5 h-5 rounded-full object-cover border border-primary/20" />
+                    <img
+                      src={user.profileImage}
+                      alt="profile"
+                      className="w-6 h-6 rounded-full object-cover border border-primary/20"
+                    />
                   ) : (
                     <User className="w-4 h-4" />
                   )}
                   Profile
+
                   <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
                 </Link>
               )}
             </nav>
 
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
+            <ThemeToggle />
 
-              {isAuthenticated ? (
-                <>
-                  <Button
-                    asChild
-                    className="hidden md:flex gap-2 bg-primary/90 hover:bg-primary"
-                  >
-                    <Link href="/dashboard">
-                      <MessageCircle className="w-4 h-4 mr-1" />
-                      Start Chat
-                    </Link>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={logout}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign out
-                  </Button>
-                </>
-              ) : (
-                <SignInButton />
-              )}
+            {/* AUTH */}
+            {isAuthenticated ? (
+              <>
+                <Button asChild className="hidden md:flex gap-2 bg-primary/90 hover:bg-primary">
+                  <Link href="/dashboard">
+                    <MessageCircle className="w-4 h-4 mr-1" />
+                    Dashboard
+                  </Link>
+                </Button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-              >
-                {isMenuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
+                <Button
+                  variant="ghost"
+                  onClick={logout}
+                  className="hidden md:flex px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign out
+                </Button>
+              </>
+            ) : (
+              <SignInButton />
+            )}
+
+            {/* MOBILE TOGGLE */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
 
-        {/* Mobile menu */}
+        {/* MOBILE MENU */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-primary/10">
             <nav className="flex flex-col space-y-1 py-4">
+
+              {/* FEATURES + ABOUT (NO UNDERLINE NEEDED MOBILE STYLE) */}
               {navItems.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={closeMenu}
                   className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-md transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   {item.label}
                 </Link>
               ))}
+
+              {/* DASHBOARD */}
+              {isAuthenticated && (
+                <Link
+                  href="/dashboard"
+                  onClick={closeMenu}
+                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-md transition-colors flex items-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Dashboard
+                </Link>
+              )}
+
+              {/* PROFILE (FIXED IMAGE + CLEAN UI) */}
               {isAuthenticated && (
                 <Link
                   href="/profile"
-                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-md transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={closeMenu}
+                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-md transition-colors flex items-center gap-2"
                 >
+                  {user?.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt="profile"
+                      className="w-5 h-5 rounded-full object-cover border border-primary/20"
+                    />
+                  ) : (
+                    <User className="w-4 h-4" />
+                  )}
                   Profile
                 </Link>
               )}
+
+              {/* SIGNOUT (FIXED ALIGNMENT) */}
               {isAuthenticated && (
-                <Button
-                  asChild
-                  className="mt-2 mx-4 gap-2 bg-primary/90 hover:bg-primary"
+                <button
+                  onClick={() => {
+                    logout();
+                    closeMenu();
+                  }}
+                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 rounded-md transition-colors flex items-center gap-2 w-full text-left"
                 >
-                  <Link href="/dashboard">
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Start Chat</span>
-                  </Link>
-                </Button>
+                  <LogOut className="w-4 h-4" />
+                  Sign out
+                </button>
               )}
             </nav>
           </div>
         )}
       </header>
-
-      {/* <LoginModal /> */}
     </div>
   );
 }

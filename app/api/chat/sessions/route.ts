@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
-    console.log("Creating new chat session...");
 
     const response = await fetch(`${BACKEND_API_URL}/chat/sessions`, {
       method: "POST",
@@ -33,7 +32,6 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await response.json();
-    console.log("Chat session created:", data);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error creating chat session:", error);
@@ -53,7 +51,6 @@ export async function GET(req: NextRequest) {
         { status: 401 }
       );
     }
-    console.log("Fetching all chat sessions...");
 
     const response = await fetch(`${BACKEND_API_URL}/chat/sessions`, {
       method: "GET",

@@ -37,11 +37,8 @@ export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
     emotions.find((em) => Math.abs(moodScore - em.value) < 15) || emotions[2];
 
   const handleSubmit = async () => {
-    console.log("MoodForm: Starting submission");
-    console.log("MoodForm: Auth state:", { isAuthenticated, loading, user });
 
     if (!isAuthenticated) {
-      console.log("MoodForm: User not authenticated");
       toast({
         title: "Authentication required",
         description: "Please log in to track your mood",
@@ -54,10 +51,6 @@ export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
     try {
       setIsLoading(true);
       const token = localStorage.getItem("token");
-      console.log(
-        "MoodForm: Token from localStorage:",
-        token ? "exists" : "not found"
-      );
 
       const response = await fetch("/api/mood", {
         method: "POST",
@@ -68,7 +61,6 @@ export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
         body: JSON.stringify({ score: moodScore }),
       });
 
-      console.log("MoodForm: Response status:", response.status);
 
       if (!response.ok) {
         const error = await response.json();
@@ -77,7 +69,6 @@ export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
       }
 
       const data = await response.json();
-      console.log("MoodForm: Success response:", data);
 
       toast({
         title: "Mood tracked successfully!",

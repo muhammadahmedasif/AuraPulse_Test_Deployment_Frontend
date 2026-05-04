@@ -146,9 +146,8 @@ export default function TherapyPage() {
 
       try {
         setIsLoading(true);
-        console.log("Loading existing chat session:", sessionId);
         const history = await getChatHistory(sessionId);
-        
+
         if (Array.isArray(history)) {
           const formattedHistory = history.map((msg) => ({
             ...msg,
@@ -181,11 +180,11 @@ export default function TherapyPage() {
     try {
       setIsLoading(true);
       const newSessionId = await createChatSession();
-      
+
       // Update session list to include the new one immediately
       const allSessions = await getAllChatSessions();
       setSessions(allSessions);
-      
+
       router.push(`/therapy/${newSessionId}`);
     } catch (error) {
       console.error("Failed to create new session:", error);
@@ -198,10 +197,10 @@ export default function TherapyPage() {
     e.stopPropagation(); // Prevent navigating to the session when clicking delete
     try {
       await deleteChatSession(idToDelete);
-      
+
       // Update local state to remove the session instantly
-      setSessions(prev => prev.filter(s => s.sessionId !== idToDelete));
-      
+      setSessions((prev) => prev.filter((s) => s.sessionId !== idToDelete));
+
       // If we just deleted the currently active session, navigate away
       if (sessionId === idToDelete) {
         router.push("/therapy/new");
@@ -227,20 +226,9 @@ export default function TherapyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted");
     const currentMessage = message.trim();
-    console.log("Current message:", currentMessage);
-    console.log("Session ID:", sessionId);
-    console.log("Is typing:", isTyping);
-    console.log("Is chat paused:", isChatPaused);
 
     if (!currentMessage || isTyping || isChatPaused || !sessionId) {
-      console.log("Submission blocked:", {
-        noMessage: !currentMessage,
-        isTyping,
-        isChatPaused,
-        noSessionId: !sessionId,
-      });
       return;
     }
 
@@ -256,9 +244,6 @@ export default function TherapyPage() {
       };
       setMessages((prev) => [...prev, userMessage]);
 
-      console.log("SENDING TO BACKEND:", currentMessage);
-      console.log("Sending message to API...");
-      
       // Add empty assistant message immediately so we can stream into it
       setMessages((prev) => [
         ...prev,
@@ -268,10 +253,10 @@ export default function TherapyPage() {
           timestamp: new Date(),
         },
       ]);
-      
+
       const response = await sendChatMessageStream(sessionId, currentMessage);
       if (!response.body) throw new Error("No response body");
-      
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -279,22 +264,22 @@ export default function TherapyPage() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         // Keep the last incomplete line in the buffer
         buffer = lines.pop() || "";
-        
+
         for (const line of lines) {
           if (!line.trim()) continue;
           try {
             const data = JSON.parse(line);
-            
+
             if (data.t === "chunk") {
               // Hide thinking, start typing
               setIsThinking(false);
               setIsTyping(true);
-              
+
               // Append text chunk to the last message
               setMessages((prev) => {
                 const newMessages = [...prev];
@@ -318,8 +303,14 @@ export default function TherapyPage() {
               });
 
               // Auto-trigger activity modal if backend says so
-              if (data.metadata?.emotionMeta?.autoTrigger && data.metadata?.emotionMeta?.suggestedActivity) {
-                handleActivityTrigger(data.metadata.emotionMeta.suggestedActivity, data.metadata.emotionMeta.emotion);
+              if (
+                data.metadata?.emotionMeta?.autoTrigger &&
+                data.metadata?.emotionMeta?.suggestedActivity
+              ) {
+                handleActivityTrigger(
+                  data.metadata.emotionMeta.suggestedActivity,
+                  data.metadata.emotionMeta.emotion
+                );
               }
             }
           } catch (e) {
@@ -327,7 +318,7 @@ export default function TherapyPage() {
           }
         }
       }
-      
+
       setIsThinking(false);
       setIsTyping(false);
       scrollToBottom();
@@ -399,7 +390,7 @@ export default function TherapyPage() {
   };
   const handleSuggestedQuestion = async (text: string) => {
     let currentSessionId = sessionId;
-    
+
     if (!currentSessionId || currentSessionId === "new") {
       try {
         setIsLoading(true);
