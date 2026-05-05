@@ -111,15 +111,27 @@ export default function TherapyPage() {
   const [isChatPaused, setIsChatPaused] = useState(false);
   const [showNFTCelebration, setShowNFTCelebration] = useState(false);
   const [isCompletingSession, setIsCompletingSession] = useState(false);
-  const sessionId = params.sessionId as string;
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+
+  // SINGLE SOURCE OF TRUTH: activeSessionId state (replaces stale params.sessionId)
+  const [activeSessionId, setActiveSessionId] = useState<string>("new");
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
 
   // 1. Initial mounting check
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // 2. Load all chat sessions (sidebar) - Only once on mount
+  // 2a. Sync URL params to activeSessionId state (single source of truth)
+  // This ensures activeSessionId stays in sync with actual URL
+  useEffect(() => {
+    const newSessionId = params.sessionId as string;
+    if (newSessionId && newSessionId !== activeSessionId) {
+      setActiveSessionId(newSessionId);
+    }
+  }, [params.sessionId, activeSessionId]);
+
+  // 2b. Load all chat sessions (sidebar) - Only once on mount
   useEffect(() => {
     const loadSessions = async () => {
       try {
@@ -135,11 +147,12 @@ export default function TherapyPage() {
     }
   }, [mounted]);
 
-  // 3. Load chat history whenever sessionId changes
+  // 3. Load chat history whenever activeSessionId changes
+  // Uses activeSessionId (state) instead of sessionId (stale params)
   useEffect(() => {
     const loadHistory = async () => {
-      if (!sessionId || sessionId === "new") {
-        // If we're coming to "new" session, check for prefill in URL
+      if (!activeSessionId || activeSessionId === "new") {
+        // If we're on "new" session, check for prefill in URL
         const searchParams = new URLSearchParams(window.location.search);
         const prefill = searchParams.get("prefill");
         if (prefill) {
@@ -147,15 +160,24 @@ export default function TherapyPage() {
           // Clear query param
           window.history.replaceState(null, "", window.location.pathname);
         }
-        
-        setMessages([]);
+
+        // Only clear messages if we don't have any (don't overwrite handleSubmit additions)
+        if (messages.length === 0) {
+          setMessages([]);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Skip history load if we already have messages in this session
+      if (messages.length > 0) {
         setIsLoading(false);
         return;
       }
 
       try {
         setIsLoading(true);
-        const history = await getChatHistory(sessionId);
+        const history = await getChatHistory(activeSessionId);
 
         if (Array.isArray(history)) {
           const formattedHistory = history.map((msg) => ({
@@ -180,21 +202,16 @@ export default function TherapyPage() {
       }
     };
     if (mounted) {
-      // Skip loading history if we just transitioned from "new" and already have messages
-      if (sessionId !== "new" && messages.length > 0) {
-        setIsLoading(false);
-        return;
-      }
       loadHistory();
     }
-  }, [sessionId, mounted]);
+  }, [activeSessionId, mounted]);
 
   const handleNewSession = () => {
     router.push("/therapy/new");
   };
 
   const handleDeleteSession = async (e: React.MouseEvent, idToDelete: string) => {
-    e.stopPropagation(); // Prevent navigating to the session when clicking delete
+    e.stopPropagation();
     try {
       await deleteChatSession(idToDelete);
 
@@ -202,7 +219,7 @@ export default function TherapyPage() {
       setSessions((prev) => prev.filter((s) => s.sessionId !== idToDelete));
 
       // If we just deleted the currently active session, navigate away
-      if (sessionId === idToDelete) {
+      if (activeSessionId === idToDelete) {
         router.push("/therapy/new");
       }
     } catch (error) {
@@ -228,34 +245,47 @@ export default function TherapyPage() {
     e.preventDefault();
     const currentMessage = message.trim();
 
-    if (!currentMessage || isTyping || isChatPaused || !sessionId) {
+    // Prevent submission if conditions not met or session creation in progress
+    if (!currentMessage || isTyping || isChatPaused || isCreatingSession) {
       return;
     }
 
-    let activeSessionId = sessionId;
+    // Use current state value (activeSessionId) as source of truth, not stale params
+    let targetSessionId = activeSessionId;
 
     setMessage("");
     setIsThinking(true);
 
     try {
-      // 1. If it's a new session, create it in DB first
-      if (sessionId === "new") {
+      // Create session only if we're on "new" and not already creating
+      if (activeSessionId === "new") {
+        setIsCreatingSession(true);
         try {
+          // 1. Create session in backend
           const newId = await createChatSession();
-          activeSessionId = newId;
-          // Update URL without full page reload to the real ID
-          window.history.replaceState(null, "", `/therapy/${newId}`);
-          
-          // Refresh sidebar in background
+          targetSessionId = newId;
+
+          // 2. Update state FIRST (before route change) to keep in sync
+          setActiveSessionId(newId);
+
+          // 3. Update URL using Next.js router (triggers proper route change)
+          // This ensures useParams() gets updated, not just browser URL
+          router.replace(`/therapy/${newId}`);
+
+          // 4. Refresh sidebar in background
           getAllChatSessions().then(setSessions).catch(console.error);
         } catch (error) {
           console.error("Failed to initialize session:", error);
           setIsThinking(false);
+          setIsCreatingSession(false);
           return;
+        } finally {
+          setIsCreatingSession(false);
         }
       }
 
-      // Add user message to UI
+      // Add user message to UI IMMEDIATELY (before API call)
+      // This prevents history loading from clearing it
       const userMessage: ChatMessage = {
         role: "user",
         content: currentMessage,
@@ -273,7 +303,8 @@ export default function TherapyPage() {
         },
       ]);
 
-      const response = await sendChatMessageStream(activeSessionId, currentMessage);
+      // Stream the message to the correct session
+      const response = await sendChatMessageStream(targetSessionId, currentMessage);
       if (!response.body) throw new Error("No response body");
 
       const reader = response.body.getReader();
@@ -357,10 +388,6 @@ export default function TherapyPage() {
     }
   };
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   if (!mounted || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -368,8 +395,6 @@ export default function TherapyPage() {
       </div>
     );
   }
-
-
 
   const handleActivityTrigger = (
     activityType: "breathing" | "ocean" | "forest" | "zen",
@@ -408,7 +433,7 @@ export default function TherapyPage() {
     });
   };
   const handleSuggestedQuestion = (text: string) => {
-    if (sessionId === "new") {
+    if (activeSessionId === "new") {
       setMessage(text);
     } else {
       router.push(`/therapy/new?prefill=${encodeURIComponent(text)}`);
@@ -428,7 +453,7 @@ export default function TherapyPage() {
   };
 
   const handleSessionSelect = async (selectedSessionId: string) => {
-    if (selectedSessionId === sessionId) {
+    if (selectedSessionId === activeSessionId) {
       setIsSidebarOpen(false);
       return;
     }
@@ -436,7 +461,7 @@ export default function TherapyPage() {
     router.push(`/therapy/${selectedSessionId}`);
   };
 
-  const currentSession = sessions.find((s) => s.sessionId === sessionId);
+  const currentSession = sessions.find((s) => s.sessionId === activeSessionId);
   const currentTitle = currentSession?.title || "New Chat";
 
   return (
@@ -494,7 +519,7 @@ export default function TherapyPage() {
                   key={session.sessionId}
                   className={cn(
                     "p-3 rounded-lg text-sm cursor-pointer hover:bg-primary/5 transition-colors",
-                    session.sessionId === sessionId
+                    session.sessionId === activeSessionId
                       ? "bg-primary/10 text-primary"
                       : "bg-secondary/10"
                   )}
