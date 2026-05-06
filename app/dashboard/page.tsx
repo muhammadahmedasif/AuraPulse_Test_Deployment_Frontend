@@ -874,7 +874,7 @@ export default function Dashboard() {
 
       {/* AI check-in chat */}
       {showCheckInChat && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40">
           <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-background border-l shadow-lg">
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between px-4 py-3 border-b">

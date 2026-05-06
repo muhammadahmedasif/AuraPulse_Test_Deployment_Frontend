@@ -470,14 +470,14 @@ export default function TherapyPage() {
         {/* Mobile Sidebar Overlay */}
         {isSidebarOpen && (
           <div 
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
         
         {/* Sidebar with chat history */}
         <div className={cn(
-          "fixed inset-y-0 left-0 z-50 w-80 bg-background border-r flex flex-col transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:bg-muted/30 pt-16 lg:pt-0",
+          "fixed inset-y-0 left-0 z-40 w-80 bg-background border-r flex flex-col transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:bg-muted/30 pt-16 lg:pt-0",
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           <div className="p-4 border-b">
