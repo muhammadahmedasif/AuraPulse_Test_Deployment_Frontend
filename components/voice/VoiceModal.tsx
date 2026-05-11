@@ -38,7 +38,7 @@ const VoiceAura = ({ state, activityActive }: { state: string; activityActive: b
   const isProcessing = state === "processing";
 
   return (
-    <div className="relative flex items-center justify-center w-48 h-48">
+    <div className="relative flex items-center justify-center w-32 h-32 md:w-48 md:h-48">
       {/* Pulse Rings */}
       <AnimatePresence>
         {(isListening || isSpeaking || isProcessing) && (
@@ -66,7 +66,7 @@ const VoiceAura = ({ state, activityActive }: { state: string; activityActive: b
         }}
         transition={{ duration: 1.5, repeat: Infinity }}
         className={cn(
-          "relative z-10 w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500 border-4 shadow-sm",
+          "relative z-10 w-24 h-24 md:w-32 md:h-32 rounded-full flex items-center justify-center transition-all duration-500 border-4 shadow-sm",
           activityActive ? "bg-muted border-muted-foreground/20" :
             isListening ? "bg-primary border-primary/20 shadow-primary/20" :
               isSpeaking ? "bg-secondary border-secondary/20 shadow-secondary/20" :
@@ -76,11 +76,11 @@ const VoiceAura = ({ state, activityActive }: { state: string; activityActive: b
       >
         <AnimatePresence mode="wait">
           {isProcessing ? (
-            <Loader2 key="proc" className="w-10 h-10 text-primary-foreground animate-spin" />
+            <Loader2 key="proc" className="w-8 h-8 md:w-10 md:h-10 text-primary-foreground animate-spin" />
           ) : isSpeaking ? (
-            <Volume2 key="speak" className="w-10 h-10 text-secondary-foreground" />
+            <Volume2 key="speak" className="w-8 h-8 md:w-10 md:h-10 text-secondary-foreground" />
           ) : (
-            <Mic key="mic" className={cn("w-10 h-10", isListening ? "text-primary-foreground" : "text-muted-foreground")} />
+            <Mic key="mic" className={cn("w-8 h-8 md:w-10 md:h-10", isListening ? "text-primary-foreground" : "text-muted-foreground")} />
           )}
         </AnimatePresence>
       </motion.div>
@@ -468,7 +468,7 @@ export function VoiceModal({
     >
       <DialogContent
         className={cn(
-          "sm:max-w-[850px] w-[95vw] h-[600px] max-h-[90vh] p-0 overflow-hidden transition-all duration-300 rounded-[--radius] bg-background border-border shadow-2xl flex flex-col",
+          "sm:max-w-[850px] w-full sm:w-[95vw] h-[95vh] md:h-[600px] p-0 overflow-hidden transition-all duration-300 rounded-none sm:rounded-[--radius] bg-background border-border shadow-2xl flex flex-col",
           activityActive ? "pointer-events-none opacity-50 scale-[0.98]" : ""
         )}
         overlayClassName={cn(activityActive && "pointer-events-none")}
@@ -476,7 +476,7 @@ export function VoiceModal({
         onEscapeKeyDown={(e) => { if (activityActive) e.preventDefault(); }}
       >
           {/* Header Area - Matched with App Branding */}
-          <div className="flex items-center justify-between p-5 border-b bg-background/50 backdrop-blur-sm shrink-0">
+          <div className="flex items-center justify-between p-4 md:p-5 border-b bg-background/50 backdrop-blur-sm shrink-0">
             <div className="flex items-center space-x-2">
               <AudioWaveform className="h-7 w-7 text-primary animate-pulse-gentle" />
               <div className="flex flex-col gap-1">
@@ -492,7 +492,7 @@ export function VoiceModal({
 
           <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
             {/* Main Interaction Side (Left) - Stable Layout */}
-            <div className="flex-[1.2] flex flex-col items-center justify-between p-8 border-r border-border/50 h-full overflow-hidden">
+            <div className="flex-[1.1] flex flex-col items-center justify-between p-4 md:p-8 border-b md:border-b-0 md:border-r border-border/50 h-[45%] md:h-full overflow-hidden shrink-0 md:shrink">
               <div className="flex-1 flex items-center justify-center">
                 <button
                   onClick={handleMicClick}
@@ -503,7 +503,7 @@ export function VoiceModal({
                 </button>
               </div>
 
-              <div className="w-full max-w-sm h-48 flex flex-col items-center justify-start text-center overflow-y-auto scrollbar-sleek px-2 shrink-0">
+              <div className="w-full max-w-sm h-24 md:h-48 flex flex-col items-center justify-start text-center overflow-y-auto scrollbar-sleek px-2 shrink-0 md:shrink">
                 <AnimatePresence mode="wait">
                   {isStreaming || aiResponse ? (
                     <motion.div
@@ -513,7 +513,7 @@ export function VoiceModal({
                       className="space-y-1 py-2"
                     >
                       <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] sticky top-0 bg-background/80 backdrop-blur-sm py-1">AuraPulse Speaking</p>
-                      <p className="text-lg font-medium text-foreground leading-snug">
+                      <p className="text-base md:text-lg font-medium text-foreground leading-snug">
                         {aiResponse || "Processing..."}
                       </p>
                     </motion.div>
@@ -525,7 +525,7 @@ export function VoiceModal({
                       className="space-y-1 py-2"
                     >
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] sticky top-0 bg-background/80 backdrop-blur-sm py-1">You said</p>
-                      <p className="text-lg font-medium text-foreground leading-snug italic">
+                      <p className="text-base md:text-lg font-medium text-foreground leading-snug italic">
                         "{voice.transcript}"
                       </p>
                     </motion.div>
@@ -548,7 +548,7 @@ export function VoiceModal({
             </div>
 
             {/* History Side (Right) - Fixed Scroll Area */}
-            <div className="flex-1 flex flex-col bg-muted/20">
+            <div className="flex-1 flex flex-col bg-muted/20 h-[55%] md:h-full overflow-hidden">
               <div className="p-4 border-b flex items-center gap-2 bg-muted/40 shrink-0">
                 <History className="w-4 h-4 text-primary" />
                 <h3 className="text-[12px] font-bold text-muted-foreground tracking-[0.15em]">Conversation History</h3>
@@ -581,19 +581,19 @@ export function VoiceModal({
           </div>
 
           {/* Bottom Control Bar - Fixed Height */}
-          <div className="p-5 border-t bg-background/50 backdrop-blur-sm shrink-0">
-            <div className="flex items-center justify-center gap-4">
+          <div className="p-4 md:p-5 border-t bg-background/50 backdrop-blur-sm shrink-0">
+            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4">
               <Button
                 variant={isConversationMode ? "default" : "outline"}
-                size="lg"
-                onClick={handleToggleConversationMode}
+                size="sm"
                 className={cn(
-                  "rounded-full px-8 gentle-shadow transition-all",
+                  "rounded-full px-4 md:px-8 md:h-11 gentle-shadow transition-all text-xs md:text-sm",
                   isConversationMode && "bg-primary hover:bg-primary/90"
                 )}
+                onClick={handleToggleConversationMode}
                 disabled={activityActive}
               >
-                <Zap className={cn("w-4 h-4 mr-2", isConversationMode && "fill-current")} />
+                <Zap className={cn("w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2", isConversationMode && "fill-current")} />
                 {isConversationMode ? "Hands-Free On" : "Hands-Free Mode"}
               </Button>
 
@@ -601,22 +601,22 @@ export function VoiceModal({
                 <Button
                   onClick={handleManualSend}
                   disabled={isStreaming || activityActive}
-                  size="lg"
-                  className="rounded-full px-8 bg-primary hover:bg-primary/90 text-primary-foreground gentle-shadow"
+                  size="sm"
+                  className="rounded-full px-4 md:px-8 md:h-11 bg-primary hover:bg-primary/90 text-primary-foreground gentle-shadow text-xs md:text-sm"
                 >
-                  <Send className="w-4 h-4 mr-2" />
+                  <Send className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />
                   Send
                 </Button>
               )}
 
               <Button
                 variant="outline"
-                size="lg"
+                size="sm"
                 onClick={handleNewChat}
                 disabled={isCreatingNewChat || activityActive}
-                className="rounded-full px-8 hover-lift"
+                className="rounded-full px-4 md:px-8 md:h-11 hover-lift text-xs md:text-sm"
               >
-                {isCreatingNewChat ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MessageSquarePlus className="w-4 h-4 mr-2" />}
+                {isCreatingNewChat ? <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin mr-1.5 md:mr-2" /> : <MessageSquarePlus className="w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2" />}
                 New Chat
               </Button>
             </div>

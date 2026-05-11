@@ -751,12 +751,12 @@ export default function Dashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {wellnessStats.map((stat) => (
                     <div
                       key={stat.title}
                       className={cn(
-                        "p-4 rounded-lg transition-all duration-200 hover:scale-[1.02]",
+                        "p-3 sm:p-4 rounded-lg transition-all duration-200 hover:scale-[1.02]",
                         stat.bgColor
                       )}
                     >
@@ -1004,8 +1004,8 @@ export default function Dashboard() {
 
       {/* Activity Modal Overlay (shared with voice mode) */}
       {stressPrompt && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-background rounded-xl border shadow-lg flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-0 sm:p-4">
+          <div className="relative w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto bg-background rounded-none sm:rounded-xl border shadow-lg flex flex-col">
             <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
               <div>
                 <h3 className="text-lg font-semibold">{stressPrompt.activity.title}</h3>
