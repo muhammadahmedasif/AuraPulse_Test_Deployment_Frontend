@@ -35,6 +35,13 @@ import { Ripple } from "@/components/ui/ripple";
 import { useSession } from "@/lib/contexts/session-context";
 import { getMoodHistory, trackMood } from "@/lib/api/mood";
 import { useToast } from "@/components/ui/use-toast";
+import { VoiceModal } from "@/components/voice/VoiceModal";
+import { createChatSession } from "@/lib/api/chat";
+import { BreathingGame } from "@/components/games/breathing-game";
+import { ZenGarden } from "@/components/games/zen-garden";
+import { ForestGame } from "@/components/games/forest-game";
+import { OceanWaves } from "@/components/games/ocean-waves";
+import { X } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -52,6 +59,16 @@ export default function Home() {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSavingMood, setIsSavingMood] = useState(false);
   const [moodSaved, setMoodSaved] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [voiceSessionId, setVoiceSessionId] = useState<string>("");
+  const [stressPrompt, setStressPrompt] = useState<{
+    trigger: string;
+    activity: {
+      type: "breathing" | "garden" | "forest" | "waves";
+      title: string;
+      description: string;
+    };
+  } | null>(null);
   const { isAuthenticated } = useSession();
   const { toast } = useToast();
 
@@ -125,6 +142,73 @@ export default function Home() {
     } finally {
       setIsSavingMood(false);
     }
+  };
+
+  const handleStartTextTherapy = () => {
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+    router.push("/therapy/new");
+    setShowDialog(false);
+    setCurrentStep(0);
+  };
+
+  const handleStartVoiceTherapy = async () => {
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
+    try {
+      const sessionId = await createChatSession();
+      setVoiceSessionId(sessionId);
+      setShowVoiceModal(true);
+      setShowDialog(false);
+      setCurrentStep(0);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start voice session",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleActivityTrigger = (
+    activityType: "breathing" | "ocean" | "forest" | "zen",
+    triggerReason: string = "support"
+  ) => {
+    let type: "breathing" | "garden" | "forest" | "waves" = "breathing";
+    let title = "Calming Activity";
+    let description = "Take a moment to center yourself";
+
+    switch (activityType) {
+      case "breathing":
+        type = "breathing";
+        title = "Breathing Patterns";
+        description = "Follow calming breathing exercises with visual guidance";
+        break;
+      case "ocean":
+        type = "waves";
+        title = "Ocean Waves";
+        description = "Match your breath with gentle ocean waves";
+        break;
+      case "forest":
+        type = "forest";
+        title = "Mindful Forest";
+        description = "Take a peaceful walk through a virtual forest";
+        break;
+      case "zen":
+        type = "garden";
+        title = "Zen Garden";
+        description = "Create and maintain your digital peaceful space";
+        break;
+    }
+
+    setStressPrompt({
+      trigger: triggerReason,
+      activity: { type, title, description },
+    });
   };
 
   const currentEmotion =
@@ -410,35 +494,80 @@ export default function Home() {
                 />
               ))}
             </div>
-            <Button
-              onClick={() => {
-                if (currentStep < welcomeSteps.length - 1) {
-                  setCurrentStep((c) => c + 1);
-                } else {
-                  router.push("/therapy/new");
-                  setShowDialog(false);
-                  setCurrentStep(0);
-                }
-              }}
-              className="relative group px-6"
-            >
-              <span className="flex items-center gap-2">
-                {currentStep === welcomeSteps.length - 1 ? (
-                  <>
-                    Let's Begin
+            {currentStep === welcomeSteps.length - 1 ? (
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleStartTextTherapy}
+                  variant="outline"
+                >
+                  <MessageSquareHeart className="w-4 h-4 mr-2" />
+                  Text Chat
+                </Button>
+                <Button
+                  onClick={handleStartVoiceTherapy}
+                  className="relative group"
+                >
+                  <span className="flex items-center gap-2">
+                    Voice
                     <Sparkles className="w-4 h-4 animate-pulse" />
-                  </>
-                ) : (
-                  <>
-                    Next
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
-                  </>
-                )}
-              </span>
-            </Button>
+                  </span>
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => {
+                  if (currentStep < welcomeSteps.length - 1) {
+                    setCurrentStep((c) => c + 1);
+                  }
+                }}
+                className="relative group px-6"
+              >
+                <span className="flex items-center gap-2">
+                  Next
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                </span>
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
+
+      <VoiceModal
+        open={showVoiceModal}
+        onOpenChange={setShowVoiceModal}
+        sessionId={voiceSessionId}
+        onActivityTrigger={(type, reason) => handleActivityTrigger(type as any, reason)}
+        activityActive={!!stressPrompt}
+        onSessionChange={(newId) => setVoiceSessionId(newId)}
+      />
+
+      {/* Activity Modal Overlay (shared with voice mode) */}
+      {stressPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-background rounded-xl border shadow-lg flex flex-col">
+            <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <div>
+                <h3 className="text-lg font-semibold">{stressPrompt.activity.title}</h3>
+                <p className="text-sm text-muted-foreground">{stressPrompt.activity.description}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full shrink-0"
+                onClick={() => setStressPrompt(null)}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="p-4 flex-1">
+              {stressPrompt.activity.type === "breathing" && <BreathingGame />}
+              {stressPrompt.activity.type === "waves" && <OceanWaves />}
+              {stressPrompt.activity.type === "forest" && <ForestGame />}
+              {stressPrompt.activity.type === "garden" && <ZenGarden />}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add custom animations to globals.css */}
     </div>

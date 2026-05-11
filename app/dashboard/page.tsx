@@ -37,6 +37,10 @@ import { cn } from "@/lib/utils";
 
 import { MoodForm } from "@/components/mood/mood-form";
 import { AnxietyGames } from "@/components/games/anxiety-games";
+import { BreathingGame } from "@/components/games/breathing-game";
+import { ZenGarden } from "@/components/games/zen-garden";
+import { ForestGame } from "@/components/games/forest-game";
+import { OceanWaves } from "@/components/games/ocean-waves";
 
 import {
   getActivityHistory,
@@ -65,7 +69,8 @@ import {
 
 import { ActivityLogger } from "@/components/activities/activity-logger";
 import { useSession } from "@/lib/contexts/session-context";
-import { getAllChatSessions } from "@/lib/api/chat";
+import { getAllChatSessions, createChatSession } from "@/lib/api/chat";
+import { VoiceModal } from "@/components/voice/VoiceModal";
 
 // type definition
 type ActivityLevel = "none" | "low" | "medium" | "high";
@@ -257,6 +262,16 @@ export default function Dashboard() {
   const [showCheckInChat, setShowCheckInChat] = useState(false);
   const [activityHistory, setActivityHistory] = useState<DayActivity[]>([]);
   const [showActivityLogger, setShowActivityLogger] = useState(false);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [voiceSessionId, setVoiceSessionId] = useState<string>("");
+  const [stressPrompt, setStressPrompt] = useState<{
+    trigger: string;
+    activity: {
+      type: "breathing" | "garden" | "forest" | "waves";
+      title: string;
+      description: string;
+    };
+  } | null>(null);
   const [isSavingActivity, setIsSavingActivity] = useState(false);
   const [isSavingMood, setIsSavingMood] = useState(false);
   const [dailyStats, setDailyStats] = useState<DailyStats>({
@@ -476,6 +491,53 @@ export default function Dashboard() {
     setShowActivityLogger(true);
   };
 
+  const handleStartVoiceTherapy = async () => {
+    try {
+      const sessionId = await createChatSession();
+      setVoiceSessionId(sessionId);
+      setShowVoiceModal(true);
+    } catch (error) {
+      console.error("Error creating voice session:", error);
+    }
+  };
+
+  const handleActivityTrigger = (
+    activityType: "breathing" | "ocean" | "forest" | "zen",
+    triggerReason: string = "support"
+  ) => {
+    let type: "breathing" | "garden" | "forest" | "waves" = "breathing";
+    let title = "Calming Activity";
+    let description = "Take a moment to center yourself";
+
+    switch (activityType) {
+      case "breathing":
+        type = "breathing";
+        title = "Breathing Patterns";
+        description = "Follow calming breathing exercises with visual guidance";
+        break;
+      case "ocean":
+        type = "waves";
+        title = "Ocean Waves";
+        description = "Match your breath with gentle ocean waves";
+        break;
+      case "forest":
+        type = "forest";
+        title = "Mindful Forest";
+        description = "Take a peaceful walk through a virtual forest";
+        break;
+      case "zen":
+        type = "garden";
+        title = "Zen Garden";
+        description = "Create and maintain your digital peaceful space";
+        break;
+    }
+
+    setStressPrompt({
+      trigger: triggerReason,
+      activity: { type, title, description },
+    });
+  };
+
   // Add handler for game activities
   const handleGamePlayed = useCallback(
     async (gameName: string, description: string) => {
@@ -596,7 +658,7 @@ export default function Dashboard() {
                       </div>
                     </Button>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-3">
                       <Button
                         variant="outline"
                         className={cn(
@@ -633,6 +695,26 @@ export default function Dashboard() {
                           <div className="font-medium text-sm">Check-in</div>
                           <div className="text-xs text-muted-foreground mt-0.5">
                             Quick wellness check
+                          </div>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "flex flex-col h-[120px] px-4 py-3 group/voice hover:border-primary/50",
+                          "justify-center items-center text-center",
+                          "transition-all duration-200 group-hover:translate-y-[-2px]"
+                        )}
+                        onClick={handleStartVoiceTherapy}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mb-2">
+                          <PhoneCall className="w-5 h-5 text-purple-500" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">Voice Therapy</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Speak with AI
                           </div>
                         </div>
                       </Button>
@@ -901,6 +983,47 @@ export default function Dashboard() {
           fetchDailyStats();
         }}
       />
+
+      <VoiceModal
+        open={showVoiceModal}
+        onOpenChange={setShowVoiceModal}
+        sessionId={voiceSessionId}
+        onMessageSent={() => {
+          loadActivities();
+          fetchDailyStats();
+        }}
+        onActivityTrigger={(type, reason) => handleActivityTrigger(type as any, reason)}
+        activityActive={!!stressPrompt}
+        onSessionChange={(newId) => setVoiceSessionId(newId)}
+      />
+
+      {/* Activity Modal Overlay (shared with voice mode) */}
+      {stressPrompt && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-background rounded-xl border shadow-lg flex flex-col">
+            <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <div>
+                <h3 className="text-lg font-semibold">{stressPrompt.activity.title}</h3>
+                <p className="text-sm text-muted-foreground">{stressPrompt.activity.description}</p>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="rounded-full shrink-0"
+                onClick={() => setStressPrompt(null)}
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="p-4 flex-1">
+              {stressPrompt.activity.type === "breathing" && <BreathingGame />}
+              {stressPrompt.activity.type === "waves" && <OceanWaves />}
+              {stressPrompt.activity.type === "forest" && <ForestGame />}
+              {stressPrompt.activity.type === "garden" && <ZenGarden />}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
