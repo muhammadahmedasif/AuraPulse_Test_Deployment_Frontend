@@ -14,10 +14,79 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useVoiceAgent } from "@/lib/hooks/useVoiceAgent";
-import { MicButton } from "./MicButton";
-import { sendChatMessageStream, createChatSession } from "@/lib/api/chat";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Send, Zap, MessageSquarePlus, Loader2 } from "lucide-react";
+import { sendChatMessageStream, createChatSession } from "@/lib/api/chat";
+import {
+  AlertCircle,
+  Send,
+  Zap,
+  MessageSquarePlus,
+  Loader2,
+  X,
+  History,
+  Volume2,
+  Mic,
+  Settings2,
+  AudioWaveform
+} from "lucide-react";
+
+// --- Visual Components ---
+
+const VoiceAura = ({ state, activityActive }: { state: string; activityActive: boolean }) => {
+  const isListening = state === "listening";
+  const isSpeaking = state === "speaking";
+  const isProcessing = state === "processing";
+
+  return (
+    <div className="relative flex items-center justify-center w-48 h-48">
+      {/* Pulse Rings */}
+      <AnimatePresence>
+        {(isListening || isSpeaking || isProcessing) && (
+          <>
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: [0.8, 1.2, 0.8], opacity: [0, 0.5, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute inset-0 rounded-full bg-primary/20"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: [0.9, 1.5, 0.9], opacity: [0, 0.3, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              className="absolute inset-0 rounded-full bg-primary/10"
+            />
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Central Circle */}
+      <motion.div
+        animate={{
+          scale: isListening ? [1, 1.05, 1] : 1,
+        }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+        className={cn(
+          "relative z-10 w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500 border-4 shadow-sm",
+          activityActive ? "bg-muted border-muted-foreground/20" :
+            isListening ? "bg-primary border-primary/20 shadow-primary/20" :
+              isSpeaking ? "bg-secondary border-secondary/20 shadow-secondary/20" :
+                isProcessing ? "bg-primary/80 border-primary/20 animate-pulse" :
+                  "bg-background border-border"
+        )}
+      >
+        <AnimatePresence mode="wait">
+          {isProcessing ? (
+            <Loader2 key="proc" className="w-10 h-10 text-primary-foreground animate-spin" />
+          ) : isSpeaking ? (
+            <Volume2 key="speak" className="w-10 h-10 text-secondary-foreground" />
+          ) : (
+            <Mic key="mic" className={cn("w-10 h-10", isListening ? "text-primary-foreground" : "text-muted-foreground")} />
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+};
 
 interface VoiceModalProps {
   open: boolean;
@@ -51,6 +120,7 @@ export function VoiceModal({
   const [messageHistory, setMessageHistory] = useState<{ role: string; text: string }[]>([]);
   const [isConversationMode, setIsConversationMode] = useState(false);
   const [isCreatingNewChat, setIsCreatingNewChat] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   // Store activity metadata until TTS completes
   const pendingActivityRef = useRef<{ type: string; reason: string } | null>(null);
@@ -179,7 +249,7 @@ export function VoiceModal({
           // Trigger activity if pending
           if (pendingActivityRef.current && onActivityTrigger) {
             const { type, reason } = pendingActivityRef.current;
-            
+
             // Stop voice before opening activity
             voice.stopListening();
             voice.stopSpeaking();
@@ -206,7 +276,7 @@ export function VoiceModal({
         // Fallback: trigger immediately if no text generated or TTS disabled
         if (pendingActivityRef.current && onActivityTrigger) {
           const { type, reason } = pendingActivityRef.current;
-          
+
           voice.stopListening();
           voice.stopSpeaking();
           if (autoResumeTimerRef.current) {
@@ -388,209 +458,195 @@ export function VoiceModal({
 
   // ─── Render ───────────────────────────────────────────────────────────
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       modal={!activityActive}
       onOpenChange={(isOpen) => {
-        // Prevent closing the VoiceModal while activity is active
         if (activityActive) return;
         handleClose();
       }}
     >
-      <DialogContent 
+      <DialogContent
         className={cn(
-          "sm:max-w-[600px] bg-card/80 backdrop-blur-lg",
-          activityActive && "pointer-events-none opacity-50"
+          "sm:max-w-[850px] w-[95vw] h-[600px] max-h-[90vh] p-0 overflow-hidden transition-all duration-300 rounded-[--radius] bg-background border-border shadow-2xl flex flex-col",
+          activityActive ? "pointer-events-none opacity-50 scale-[0.98]" : ""
         )}
         overlayClassName={cn(activityActive && "pointer-events-none")}
-        onInteractOutside={(e) => {
-          // Prevent closing when clicking on Activity Modal
-          if (activityActive) e.preventDefault();
-        }}
-        onEscapeKeyDown={(e) => {
-          if (activityActive) e.preventDefault();
-        }}
+        onInteractOutside={(e) => { if (activityActive) e.preventDefault(); }}
+        onEscapeKeyDown={(e) => { if (activityActive) e.preventDefault(); }}
       >
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Voice Therapy Session</DialogTitle>
-          <DialogDescription>
-            {activityActive
-              ? "Complete the activity to resume voice conversation"
-              : isConversationMode
-                ? "Hands-free mode - speak naturally and I'll respond"
-                : "Speak naturally - AuraPulse is listening and ready to help"}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Status Badge & Controls */}
-          <div className="flex items-center justify-between gap-2">
-            <Badge variant={voice.state === "listening" ? "default" : "outline"}>
-              {voice.state === "idle" && "Ready to listen"}
-              {voice.state === "listening" && "🎤 Listening..."}
-              {voice.state === "processing" && "⏳ Processing..."}
-              {voice.state === "speaking" && "🔊 Speaking..."}
-              {voice.state === "error" && "❌ Error"}
-            </Badge>
-
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={handleToggleConversationMode}
-                variant={isConversationMode ? "default" : "outline"}
-                size="sm"
-                className="gap-1"
-                disabled={activityActive}
-              >
-                <Zap className="w-3 h-3" />
-                {isConversationMode ? "Hands-Free On" : "Manual Mode"}
-              </Button>
+          {/* Header Area - Matched with App Branding */}
+          <div className="flex items-center justify-between p-5 border-b bg-background/50 backdrop-blur-sm shrink-0">
+            <div className="flex items-center space-x-2">
+              <AudioWaveform className="h-7 w-7 text-primary animate-pulse-gentle" />
+              <div className="flex flex-col gap-1">
+                <span className="font-semibold text-lg bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent leading-none">
+                  AuraPulse
+                </span>
+                <span className="text-[11px] text-muted-foreground tracking-tight">
+                  Your mental health Companion
+                </span>
+              </div>
             </div>
           </div>
 
-          <Separator />
+          <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+            {/* Main Interaction Side (Left) - Stable Layout */}
+            <div className="flex-[1.2] flex flex-col items-center justify-between p-8 border-r border-border/50 h-full overflow-hidden">
+              <div className="flex-1 flex items-center justify-center">
+                <button
+                  onClick={handleMicClick}
+                  disabled={isStreaming || isConversationMode || activityActive}
+                  className="cursor-pointer outline-none focus:ring-0 transition-transform active:scale-95"
+                >
+                  <VoiceAura state={voice.state} activityActive={activityActive} />
+                </button>
+              </div>
 
-          {/* Activity Pause Banner */}
-          {activityActive && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-center"
-            >
-              <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                🧘 Activity in progress — voice paused
-              </p>
-            </motion.div>
-          )}
+              <div className="w-full max-w-sm h-48 flex flex-col items-center justify-start text-center overflow-y-auto scrollbar-sleek px-2 shrink-0">
+                <AnimatePresence mode="wait">
+                  {isStreaming || aiResponse ? (
+                    <motion.div
+                      key="ai"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-1 py-2"
+                    >
+                      <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] sticky top-0 bg-background/80 backdrop-blur-sm py-1">AuraPulse Speaking</p>
+                      <p className="text-lg font-medium text-foreground leading-snug">
+                        {aiResponse || "Processing..."}
+                      </p>
+                    </motion.div>
+                  ) : voice.transcript ? (
+                    <motion.div
+                      key="user"
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="space-y-1 py-2"
+                    >
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] sticky top-0 bg-background/80 backdrop-blur-sm py-1">You said</p>
+                      <p className="text-lg font-medium text-foreground leading-snug italic">
+                        "{voice.transcript}"
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <motion.div key="idle" className="text-muted-foreground py-8">
+                      {activityActive ? (
+                        <p className="text-base font-medium opacity-60">Activity in progress...</p>
+                      ) : isConversationMode ? (
+                        <p className="text-base font-medium flex items-center justify-center gap-2 text-primary">
+                          <Zap className="w-4 h-4 fill-current" />
+                          Hands-free active
+                        </p>
+                      ) : (
+                        <p className="text-base font-medium">Tap the mic to begin</p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
 
-          {/* Mic Button */}
-          <div className="flex justify-center py-4">
-            <MicButton
-              state={voice.state}
-              onClick={handleMicClick}
-              disabled={isStreaming || isConversationMode || activityActive}
-              size="lg"
-              className="h-16 w-16 rounded-full"
-            />
-          </div>
-
-          {/* Transcript Display */}
-          <div className="bg-secondary/50 rounded-lg p-4 min-h-24 space-y-2">
-            {voice.transcript ? (
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Your words:</p>
-                <p className="text-base leading-relaxed">{voice.transcript}</p>
-                {!voice.isFinal && (
-                  <p className="text-xs text-muted-foreground italic mt-2">Still listening...</p>
-                )}
-                {voice.isFinal && isConversationMode && (
-                  <p className="text-xs text-green-600 italic mt-2">✓ Ready to send...</p>
+            {/* History Side (Right) - Fixed Scroll Area */}
+            <div className="flex-1 flex flex-col bg-muted/20">
+              <div className="p-4 border-b flex items-center gap-2 bg-muted/40 shrink-0">
+                <History className="w-4 h-4 text-primary" />
+                <h3 className="text-[12px] font-bold text-muted-foreground tracking-[0.15em]">Conversation History</h3>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-sleek">
+                {messageHistory.length > 0 ? (
+                  messageHistory.map((msg, idx) => (
+                    <div key={idx} className={cn(
+                      "flex flex-col gap-1",
+                      msg.role === "user" ? "items-end" : "items-start"
+                    )}>
+                      <div className={cn(
+                        "max-w-[85%] px-4 py-2 rounded-[0.75rem] text-sm leading-relaxed",
+                        msg.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-tr-none shadow-sm"
+                          : "bg-background border border-border/50 text-foreground rounded-tl-none shadow-sm"
+                      )}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center opacity-30 grayscale space-y-3 p-8">
+                    <MessageSquarePlus className="w-10 h-10" />
+                    <p className="text-[11px] font-bold uppercase tracking-widest">No history yet</p>
+                  </div>
                 )}
               </div>
-            ) : (
-              <p className="text-muted-foreground italic">
-                {activityActive
-                  ? "Voice paused during activity..."
-                  : isConversationMode && voice.state === "idle"
-                    ? "Click Start or begin speaking..."
-                    : voice.state === "listening"
-                      ? "Listening for your voice..."
-                      : "Click the mic to start speaking"}
-              </p>
-            )}
-          </div>
-
-          {/* AI Response Display */}
-          <AnimatePresence mode="wait">
-            {(aiResponse || isStreaming) && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="bg-primary/5 rounded-lg p-4 space-y-2"
-              >
-                <p className="text-sm font-medium text-muted-foreground">Therapist:</p>
-                <p className="text-base leading-relaxed">
-                  {aiResponse || "Thinking..."}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Error Display */}
-          {(voice.error || streamError) && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {voice.error || streamError}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Message History */}
-          {messageHistory.length > 0 && (
-            <div className="max-h-32 overflow-y-auto space-y-2 bg-muted/20 rounded-lg p-3">
-              <p className="text-xs font-medium text-muted-foreground">Conversation:</p>
-              {messageHistory.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`text-xs py-1 px-2 rounded ${
-                    msg.role === "user"
-                      ? "bg-primary/20 text-primary ml-auto max-w-xs"
-                      : "bg-secondary/50 text-secondary-foreground max-w-xs"
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              ))}
             </div>
-          )}
-
-          <Separator />
-
-          {/* Controls */}
-          <div className="flex gap-2">
-            {!isConversationMode && (
-              <Button
-                onClick={handleManualSend}
-                disabled={!voice.transcript.trim() || isStreaming || activityActive}
-                className="flex-1"
-              >
-                <Send className="w-4 h-4 mr-2" />
-                Send Message
-              </Button>
-            )}
-            <Button
-              onClick={handleNewChat}
-              variant="outline"
-              disabled={isCreatingNewChat || activityActive}
-              className="gap-1"
-            >
-              {isCreatingNewChat ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <MessageSquarePlus className="w-4 h-4" />
-              )}
-              New Chat
-            </Button>
-            <Button
-              onClick={() => voice.cancel()}
-              variant="outline"
-              disabled={activityActive}
-            >
-              Clear
-            </Button>
           </div>
 
-          {/* Help Text */}
-          <p className="text-xs text-muted-foreground text-center">
-            {activityActive
-              ? "Complete the therapeutic activity to resume your voice session."
-              : isConversationMode
-                ? "Hands-free mode: Speak naturally. Turn off hands-free to manually control."
-                : "Speak clearly. Press Send to submit or enable hands-free mode."}
-          </p>
-        </div>
+          {/* Bottom Control Bar - Fixed Height */}
+          <div className="p-5 border-t bg-background/50 backdrop-blur-sm shrink-0">
+            <div className="flex items-center justify-center gap-4">
+              <Button
+                variant={isConversationMode ? "default" : "outline"}
+                size="lg"
+                onClick={handleToggleConversationMode}
+                className={cn(
+                  "rounded-full px-8 gentle-shadow transition-all",
+                  isConversationMode && "bg-primary hover:bg-primary/90"
+                )}
+                disabled={activityActive}
+              >
+                <Zap className={cn("w-4 h-4 mr-2", isConversationMode && "fill-current")} />
+                {isConversationMode ? "Hands-Free On" : "Hands-Free Mode"}
+              </Button>
+
+              {!isConversationMode && voice.transcript && (
+                <Button
+                  onClick={handleManualSend}
+                  disabled={isStreaming || activityActive}
+                  size="lg"
+                  className="rounded-full px-8 bg-primary hover:bg-primary/90 text-primary-foreground gentle-shadow"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Send
+                </Button>
+              )}
+
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleNewChat}
+                disabled={isCreatingNewChat || activityActive}
+                className="rounded-full px-8 hover-lift"
+              >
+                {isCreatingNewChat ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <MessageSquarePlus className="w-4 h-4 mr-2" />}
+                New Chat
+              </Button>
+            </div>
+          </div>
+
+        {/* Error Display Overlay */}
+        {(voice.error || streamError) && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-md">
+            <Alert variant="destructive" className="shadow-lg border-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{voice.error || streamError}</AlertDescription>
+            </Alert>
+          </div>
+        )}
       </DialogContent>
+      <style jsx global>{`
+        .scrollbar-sleek::-webkit-scrollbar {
+          width: 4px;
+        }
+        .scrollbar-sleek::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .scrollbar-sleek::-webkit-scrollbar-thumb {
+          background: rgba(var(--primary), 0.1);
+          border-radius: 10px;
+        }
+        .scrollbar-sleek::-webkit-scrollbar-thumb:hover {
+          background: rgba(var(--primary), 0.2);
+        }
+      `}</style>
     </Dialog>
   );
 }

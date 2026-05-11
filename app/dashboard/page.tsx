@@ -22,6 +22,7 @@ import {
   Trash2,
   Clock,
   Dumbbell,
+  Mic,
 } from "lucide-react";
 import {
   Card,
@@ -630,35 +631,59 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3">
-                    <Button
-                      variant="default"
-                      className={cn(
-                        "w-full justify-between items-center p-6 h-auto group/button",
-                        "bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90",
-                        "transition-all duration-200 group-hover:translate-y-[-2px]"
-                      )}
-                      onClick={handleStartTherapy}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                          <MessageSquare className="w-4 h-4 text-white" />
-                        </div>
-                        <div className="text-left">
-                          <div className="font-semibold text-white">
-                            Start Therapy
+                    <div className="grid gap-2">
+                      {/* Primary Action: Chat */}
+                      <Button
+                        variant="default"
+                        style={{ backgroundColor: '#8CB5A2' }}
+                        className={cn(
+                          "w-full flex items-center justify-center p-4 h-auto group/button border-none",
+                          "transition-all duration-200 hover:opacity-90 hover:translate-y-[-1px] shadow-sm hover:shadow-md"
+                        )}
+                        onClick={handleStartTherapy}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                            <MessageSquare className="w-4 h-4 text-white" />
                           </div>
-                          <div className="text-xs text-white/80">
-                            Begin a new session
+                          <div className="text-left">
+                            <div className="font-semibold text-base text-white">
+                              Start a Chat
+                            </div>
+                            <div className="text-[11px] text-white/90">
+                              Speak with your AI companion
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="opacity-0 group-hover/button:opacity-100 transition-opacity">
-                        <ArrowRight className="w-5 h-5 text-white" />
-                      </div>
-                    </Button>
+                      </Button>
 
-                    <div className="grid grid-cols-3 gap-3">
+                      {/* Primary Action: Voice */}
+                      <Button
+                        variant="default"
+                        style={{ backgroundColor: '#B5A2D1' }}
+                        className={cn(
+                          "w-full flex items-center justify-center p-4 h-auto group/voice border-none",
+                          "transition-all duration-200 hover:opacity-90 hover:translate-y-[-1px] shadow-sm hover:shadow-md"
+                        )}
+                        onClick={handleStartVoiceTherapy}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                            <Mic className="w-4 h-4 text-white" />
+                          </div>
+                          <div className="text-left">
+                            <div className="font-semibold text-base text-white">
+                              Voice Therapy Session
+                            </div>
+                            <div className="text-[11px] text-white/90">
+                              Natural voice conversation
+                            </div>
+                          </div>
+                        </div>
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
                       <Button
                         variant="outline"
                         className={cn(
@@ -699,29 +724,9 @@ export default function Dashboard() {
                         </div>
                       </Button>
 
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "flex flex-col h-[120px] px-4 py-3 group/voice hover:border-primary/50",
-                          "justify-center items-center text-center",
-                          "transition-all duration-200 group-hover:translate-y-[-2px]"
-                        )}
-                        onClick={handleStartVoiceTherapy}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mb-2">
-                          <PhoneCall className="w-5 h-5 text-purple-500" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-sm">Voice Therapy</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            Speak with AI
-                          </div>
-                        </div>
-                      </Button>
                     </div>
                   </div>
-                </div>
-              </CardContent>
+                </CardContent>
             </Card>
 
             {/* Today's Overview Card */}
