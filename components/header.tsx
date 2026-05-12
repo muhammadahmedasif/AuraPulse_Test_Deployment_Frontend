@@ -9,6 +9,7 @@ import {
   AudioWaveform,
   LogOut,
   User,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
@@ -101,6 +102,18 @@ export function Header() {
                   <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
                 </Link>
               )}
+
+              {/* EMERGENCY SETTINGS (DESKTOP) */}
+              {isAuthenticated && (
+                <Link
+                  href="/settings/emergency"
+                  className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-red-500 dark:hover:text-red-400 transition-colors relative group flex items-center gap-2"
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                  Emergency
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-red-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+                </Link>
+              )}
             </nav>
 
             <ThemeToggle />
@@ -186,6 +199,18 @@ export function Header() {
                     <User className="w-4 h-4" />
                   )}
                   Profile
+                </Link>
+              )}
+
+              {/* EMERGENCY SETTINGS (MOBILE) */}
+              {isAuthenticated && (
+                <Link
+                  href="/settings/emergency"
+                  onClick={closeMenu}
+                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-red-500 hover:bg-red-500/5 rounded-md transition-colors flex items-center gap-2"
+                >
+                  <ShieldAlert className="w-4 h-4" />
+                  Emergency
                 </Link>
               )}
 
