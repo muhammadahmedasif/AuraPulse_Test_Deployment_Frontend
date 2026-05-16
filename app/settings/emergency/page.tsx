@@ -2,30 +2,30 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Shield, Phone, Plus, AlertTriangle, CheckCircle2, Clock, Settings2, ChevronRight } from "lucide-react";
-import { ConsentModal }          from "@/components/emergency/ConsentModal";
-import { AddContactModal }       from "@/components/emergency/AddContactModal";
-import { EmergencyContactCard }  from "@/components/emergency/EmergencyContactCard";
+import { ConsentModal } from "@/components/emergency/ConsentModal";
+import { AddContactModal } from "@/components/emergency/AddContactModal";
+import { EmergencyContactCard } from "@/components/emergency/EmergencyContactCard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Contact {
-  _id:          string;
-  name:         string;
+  _id: string;
+  name: string;
   relationship: string;
-  phone:        string;
-  priority:     number;
-  enabled:      boolean;
+  phone: string;
+  priority: number;
+  enabled: boolean;
 }
 
 interface EscalationStatus {
-  consentAccepted:  boolean;
-  autoCallEnabled:  boolean;
-  contactCount:     number;
-  onCooldown:       boolean;
+  consentAccepted: boolean;
+  autoCallEnabled: boolean;
+  contactCount: number;
+  onCooldown: boolean;
   cooldownExpiresAt: string | null;
-  lastEscalation:   { outcome: string; createdAt: string } | null;
+  lastEscalation: { outcome: string; createdAt: string } | null;
 }
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 function getToken(): string {
   if (typeof window === "undefined") return "";
@@ -37,7 +37,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      Authorization:  `Bearer ${getToken()}`,
+      Authorization: `Bearer ${getToken()}`,
       ...(options.headers || {}),
     },
   });
@@ -50,14 +50,14 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function EmergencySettingsPage() {
-  const [contacts,         setContacts]         = useState<Contact[]>([]);
-  const [status,           setStatus]           = useState<EscalationStatus | null>(null);
-  const [loading,          setLoading]          = useState(true);
-  const [autoCallEnabled,  setAutoCallEnabled]  = useState(false);
-  const [cooldownHours,    setCooldownHours]    = useState(6);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [status, setStatus] = useState<EscalationStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [autoCallEnabled, setAutoCallEnabled] = useState(false);
+  const [cooldownHours, setCooldownHours] = useState(6);
   const [showConsentModal, setShowConsentModal] = useState(false);
-  const [showAddModal,     setShowAddModal]     = useState(false);
-  const [toast,            setToast]            = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
     setToast({ msg, type });
@@ -161,7 +161,14 @@ export default function EmergencySettingsPage() {
   const isReady = status?.consentAccepted && contacts.filter(c => c.enabled).length > 0 && autoCallEnabled;
 
   return (
-    <div className="min-h-screen pb-16" style={{ background: "var(--bg)", color: "var(--text)" }}>
+    <div
+      className="min-h-screen pb-16"
+      style={{
+        background: "var(--bg)",
+        color: "var(--text)",
+        paddingTop: "65px", // adjust to navbar height
+      }}
+    >
       {/* ── Toast ── */}
       {toast && (
         <div
@@ -312,7 +319,12 @@ export default function EmergencySettingsPage() {
             <select
               value={cooldownHours}
               onChange={(e) => handleCooldownChange(Number(e.target.value))}
-              className="text-sm px-3 py-1.5 rounded-lg border"
+              className="
+                text-sm px-3 py-1.5 rounded-lg border
+                bg-white text-black
+                dark:!bg-gray-900 dark:text-white
+                border-gray-300 dark:border-gray-600
+              "
               style={{ background: "var(--card)", borderColor: "var(--border)", color: "var(--text)" }}
             >
               {[2, 4, 6, 12, 24].map((h) => (
@@ -356,3 +368,4 @@ export default function EmergencySettingsPage() {
     </div>
   );
 }
+
