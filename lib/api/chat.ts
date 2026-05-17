@@ -36,6 +36,7 @@ export interface ChatSession {
   createdAt: Date;
   updatedAt: Date;
   messageCount: number;
+  status?: "active" | "completed" | "archived";
 }
 
 export interface SendMessageResponse {
@@ -168,6 +169,7 @@ export async function getAllChatSessions(): Promise<ChatSession[]> {
     }] : [],
     createdAt: toDate(session.startTime),
     updatedAt: toDate(session.lastMessage?.timestamp || session.startTime),
-    messageCount: session.messageCount || 0
+    messageCount: session.messageCount || 0,
+    status: session.status
   }));
 }

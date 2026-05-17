@@ -188,12 +188,16 @@ export default function TherapyPage() {
         } else {
           setMessages([]);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to load chat history:", error);
+        const errMsg = error?.message || "";
+        const content = (errMsg.includes("not found") || errMsg.includes("archived") || errMsg.includes("404"))
+          ? "This chat session has been archived by the administrator and is no longer accessible."
+          : "I apologize, but I'm having trouble loading the chat session.";
         setMessages([
           {
             role: "assistant",
-            content: "I apologize, but I'm having trouble loading the chat session.",
+            content,
             timestamp: new Date(),
           },
         ]);
@@ -246,7 +250,7 @@ export default function TherapyPage() {
     const currentMessage = message.trim();
 
     // Prevent submission if conditions not met or session creation in progress
-    if (!currentMessage || isTyping || isChatPaused || isCreatingSession) {
+    if (!currentMessage || isTyping || isChatPaused || isSessionLocked || isCreatingSession) {
       return;
     }
 
@@ -463,6 +467,7 @@ export default function TherapyPage() {
 
   const currentSession = sessions.find((s) => s.sessionId === activeSessionId);
   const currentTitle = currentSession?.title || "New Chat";
+  const isSessionLocked = currentSession?.status === "completed" || currentSession?.status === "archived";
 
   return (
     <div className="relative max-w-7xl mx-auto lg:px-4">
@@ -791,7 +796,9 @@ export default function TherapyPage() {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={
-                    isChatPaused
+                    isSessionLocked
+                      ? "This session has been completed and is locked."
+                      : isChatPaused
                       ? "Complete the activity to continue..."
                       : "Ask me anything..."
                   }
@@ -801,11 +808,11 @@ export default function TherapyPage() {
                     "focus:outline-none focus:ring-2 focus:ring-primary/50",
                     "transition-all duration-200",
                     "placeholder:text-muted-foreground/70",
-                    (isTyping || isChatPaused) &&
+                    (isTyping || isChatPaused || isSessionLocked) &&
                       "opacity-50 cursor-not-allowed"
                   )}
                   rows={1}
-                  disabled={isTyping || isChatPaused}
+                  disabled={isTyping || isChatPaused || isSessionLocked}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -821,11 +828,11 @@ export default function TherapyPage() {
                     "rounded-xl transition-all duration-200",
                     "bg-primary hover:bg-primary/90",
                     "shadow-sm shadow-primary/20",
-                    (isTyping || isChatPaused || !message.trim()) &&
+                    (isTyping || isChatPaused || isSessionLocked || !message.trim()) &&
                       "opacity-50 cursor-not-allowed",
                     "group-hover:scale-105 group-focus-within:scale-105"
                   )}
-                  disabled={isTyping || isChatPaused || !message.trim()}
+                  disabled={isTyping || isChatPaused || isSessionLocked || !message.trim()}
                   onClick={(e) => {
                     e.preventDefault();
                     handleSubmit(e);

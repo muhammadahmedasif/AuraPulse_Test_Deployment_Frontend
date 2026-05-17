@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Shield, Phone, Plus, AlertTriangle, CheckCircle2, Clock, Settings2, ChevronRight } from "lucide-react";
+import { Shield, Phone, Plus, AlertTriangle, CheckCircle2, Clock, ChevronRight } from "lucide-react";
 import { ConsentModal } from "@/components/emergency/ConsentModal";
 import { AddContactModal } from "@/components/emergency/AddContactModal";
 import { EmergencyContactCard } from "@/components/emergency/EmergencyContactCard";
@@ -54,7 +54,6 @@ export default function EmergencySettingsPage() {
   const [status, setStatus] = useState<EscalationStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [autoCallEnabled, setAutoCallEnabled] = useState(false);
-  const [cooldownHours, setCooldownHours] = useState(6);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
@@ -107,15 +106,7 @@ export default function EmergencySettingsPage() {
     } catch { showToast("Failed to update setting", "err"); setAutoCallEnabled(!enabled); }
   };
 
-  const handleCooldownChange = async (hours: number) => {
-    setCooldownHours(hours);
-    try {
-      await apiFetch("/api/emergency/settings", {
-        method: "PUT",
-        body: JSON.stringify({ cooldownHours: hours }),
-      });
-    } catch { /* non-critical */ }
-  };
+
 
   const handleAddContact = async (data: Omit<Contact, "_id">) => {
     try {
@@ -305,34 +296,7 @@ export default function EmergencySettingsPage() {
           </div>
         </section>
 
-        {/* ── Cooldown settings ── */}
-        <section className="rounded-2xl p-5 border" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
-          <div className="flex items-center gap-2 mb-4">
-            <Settings2 className="w-4 h-4 opacity-60" />
-            <p className="font-semibold text-sm">Escalation Settings</p>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm">Cooldown between calls</p>
-              <p className="text-xs opacity-55">Minimum hours between emergency calls</p>
-            </div>
-            <select
-              value={cooldownHours}
-              onChange={(e) => handleCooldownChange(Number(e.target.value))}
-              className="
-                text-sm px-3 py-1.5 rounded-lg border
-                bg-white text-black
-                dark:!bg-gray-900 dark:text-white
-                border-gray-300 dark:border-gray-600
-              "
-              style={{ background: "var(--card)", borderColor: "var(--border)", color: "var(--text)" }}
-            >
-              {[2, 4, 6, 12, 24].map((h) => (
-                <option key={h} value={h}>{h} hours</option>
-              ))}
-            </select>
-          </div>
-        </section>
+
 
         {/* ── Cooldown status ── */}
         {status?.onCooldown && status.cooldownExpiresAt && (
