@@ -246,6 +246,7 @@ export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const router = useRouter();
   const { user } = useSession();
+  const searchParams = useSearchParams();
 
   // Rename the state variable
   const [insights, setInsights] = useState<
@@ -352,6 +353,25 @@ export default function Dashboard() {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Handle action parameter from notifications to trigger modals dynamically
+  useEffect(() => {
+    if (!mounted) return;
+    const action = searchParams?.get("action");
+    if (action) {
+      if (action === "mood") {
+        setShowMoodModal(true);
+      } else if (action === "activity") {
+        setShowActivityLogger(true);
+      } else if (action === "breathing") {
+        handleActivityTrigger("breathing", "notification");
+      } else if (action === "zen") {
+        handleActivityTrigger("zen", "notification");
+      }
+      // Clean up search parameters from the URL to preserve clean state and support relaunching
+      router.replace("/dashboard", { scroll: false });
+    }
+  }, [searchParams, mounted, router]);
 
   // Update the effect
   useEffect(() => {
@@ -603,11 +623,6 @@ export default function Dashboard() {
               })}
             </p>
           </motion.div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="icon">
-              <Bell className="h-5 w-5" />
-            </Button>
-          </div>
         </div>
 
         {/* Main Grid Layout */}
