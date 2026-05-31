@@ -655,7 +655,7 @@ export default function TherapyPage() {
           ) : (
             // Chat messages
             <div className="flex-1 overflow-y-auto scroll-smooth">
-              <div className="max-w-3xl mx-auto">
+              <div className="max-w-3xl mx-auto px-4 py-6">
                 <AnimatePresence initial={false}>
                   {messages.map((msg, index) => {
                     const isAssistant = msg.role === "assistant";

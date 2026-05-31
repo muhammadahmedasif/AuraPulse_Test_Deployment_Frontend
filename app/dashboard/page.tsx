@@ -663,10 +663,10 @@ export default function Dashboard() {
                           </div>
                           <div className="text-left">
                             <div className="font-semibold text-base text-white">
-                              Start a Chat
+                              Open Up
                             </div>
                             <div className="text-[11px] text-white/90">
-                              Speak with your AI companion
+                              Share what's on your mind.
                             </div>
                           </div>
                         </div>
@@ -688,10 +688,10 @@ export default function Dashboard() {
                           </div>
                           <div className="text-left">
                             <div className="font-semibold text-base text-white">
-                              Voice Therapy Session
+                              Speak Freely
                             </div>
                             <div className="text-[11px] text-white/90">
-                              Natural voice conversation
+                              Share your thoughts out loud and be heard.
                             </div>
                           </div>
                         </div>

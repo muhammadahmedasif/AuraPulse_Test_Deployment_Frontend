@@ -189,7 +189,7 @@ export function Header() {
     <div className="w-full fixed top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="absolute inset-0 border-b border-primary/10" />
 
-      <header ref={menuRef} className="relative max-w-6xl mx-auto px-4">
+      <header ref={menuRef} className="relative max-w-screen-2xl mx-auto px-4 md:px-20">
         <div className="flex h-16 items-center justify-between">
 
           {/* LOGO */}
@@ -277,7 +277,7 @@ export function Header() {
                 </Button>
 
                 {showNotifDropdown && (
-                  <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-card border border-primary/10 rounded-xl shadow-2xl overflow-hidden z-50 py-2">
+                  <div className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 w-auto sm:w-96 top-16 sm:top-auto sm:mt-3 bg-card border border-primary/10 rounded-xl shadow-2xl overflow-hidden z-50 py-2">
                     <div className="px-4 py-2 border-b border-primary/5 flex justify-between items-center bg-card">
                       <span className="text-xs font-semibold text-foreground">Notifications</span>
                       {notifications.length > 0 && (
@@ -364,7 +364,7 @@ export function Header() {
                 <Button
                   variant="ghost"
                   onClick={logout}
-                  className="hidden md:flex px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2"
+                  className="hidden md:flex px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors items-center gap-2"
                 >
                   <LogOut className="w-4 h-4" />
                   Sign out
@@ -388,7 +388,7 @@ export function Header() {
 
         {/* MOBILE MENU */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-primary/10">
+          <div className="md:hidden border-t border-primary/10 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <nav className="flex flex-col space-y-1 py-4">
 
               {/* FEATURES + ABOUT (NO UNDERLINE NEEDED MOBILE STYLE) */}
