@@ -659,9 +659,8 @@ export default function TherapyPage() {
                 <AnimatePresence initial={false}>
                   {messages.map((msg, index) => {
                     const isAssistant = msg.role === "assistant";
-                    const defaultAiAvatar = "https://api.dicebear.com/7.x/bottts/svg?seed=Maya&backgroundColor=b6e3f4,c0aede,d1d4f9";
                     const avatarSrc = isAssistant 
-                      ? (user?.aiAvatar || defaultAiAvatar)
+                      ? user?.aiAvatar
                       : user?.profileImage;
                     
                     const displayName = isAssistant ? (user?.aiName || "Maya") : (user?.name || "User");
@@ -685,7 +684,11 @@ export default function TherapyPage() {
                           <div className="w-10 h-10 shrink-0 mt-1">
                             {isAssistant ? (
                               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20 shadow-md overflow-hidden">
-                                <img src={avatarSrc!} alt="AI" className="w-full h-full object-cover" />
+                                {avatarSrc ? (
+                                  <img src={avatarSrc} alt="AI" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Bot className="w-5 h-5 text-muted-foreground" />
+                                )}
                               </div>
                             ) : (
                               <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary text-secondary-foreground flex items-center justify-center ring-2 ring-secondary/20 shadow-md">
@@ -766,11 +769,15 @@ export default function TherapyPage() {
                   >
                     <div className="w-10 h-10 shrink-0">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ring-2 ring-primary/20 shadow-md overflow-hidden">
-                        <img 
-                          src={user?.aiAvatar || "https://api.dicebear.com/7.x/bottts/svg?seed=Maya&backgroundColor=b6e3f4,c0aede,d1d4f9"} 
-                          alt="AI" 
-                          className="w-full h-full object-cover" 
-                        />
+                        {user?.aiAvatar ? (
+                          <img 
+                            src={user.aiAvatar} 
+                            alt="AI" 
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <Bot className="w-5 h-5 text-muted-foreground" />
+                        )}
                       </div>
                     </div>
                     <div className="flex-1 space-y-1">

@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
-import { Camera, Loader2, User as UserIcon, LogOut, ArrowLeft, Key } from "lucide-react";
-import { updateProfile, uploadAvatar, uploadAiAvatar } from "@/lib/api/user";
+import { Camera, Loader2, User as UserIcon, LogOut, ArrowLeft, Key, Trash2 } from "lucide-react";
+import { updateProfile, uploadAvatar, uploadAiAvatar, deleteAvatar, deleteAiAvatar } from "@/lib/api/user";
 import { useToast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { 
@@ -32,6 +32,8 @@ export default function ProfilePage() {
   const [aiAvatar, setAiAvatar] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isAiUploading, setIsAiUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isAiDeleting, setIsAiDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
   const router = useRouter();
@@ -69,6 +71,7 @@ export default function ProfilePage() {
       });
     } finally {
       setIsUploading(false);
+      e.target.value = "";
     }
   };
 
@@ -94,6 +97,49 @@ export default function ProfilePage() {
       });
     } finally {
       setIsAiUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteAvatar();
+      setProfileImage("");
+      await checkSession();
+      toast({
+        title: "Avatar Deleted",
+        description: "Your profile photo has been removed.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Failed to delete avatar. Please try again.",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteAiImage = async () => {
+    setIsAiDeleting(true);
+    try {
+      await deleteAiAvatar();
+      setAiAvatar("");
+      await checkSession();
+      toast({
+        title: "AI Avatar Deleted",
+        description: "The AI avatar has been reset to the default.",
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Failed to delete AI avatar. Please try again.",
+      });
+    } finally {
+      setIsAiDeleting(false);
     }
   };
 
@@ -109,10 +155,6 @@ export default function ProfilePage() {
         aiBehavior,
         aiAvatar
       });
-      // Handle AI Avatar separately if needed or just part of the same flow
-      // Since we want to stay minimal, we just send everything in updateProfile
-      // Actually, aiAvatar should be part of the user object in the backend.
-      // I'll make sure updateProfile handles aiAvatar too.
       await checkSession();
       toast({
         title: "Profile Updated",
@@ -163,7 +205,7 @@ export default function ProfilePage() {
                   ) : (
                     <UserIcon className="w-12 h-12 text-muted-foreground" />
                   )}
-                  {isUploading && (
+                  {(isUploading || isDeleting) && (
                     <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
                       <Loader2 className="w-6 h-6 animate-spin text-primary" />
                     </div>
@@ -171,17 +213,32 @@ export default function ProfilePage() {
                 </div>
                 <label 
                   htmlFor="avatar-upload" 
-                  className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full cursor-pointer hover:bg-primary/90 transition-all shadow-lg"
+                  className={`absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full cursor-pointer hover:bg-primary/90 transition-all shadow-lg ${
+                    isUploading || isDeleting ? "pointer-events-none opacity-60" : ""
+                  }`}
                 >
                   {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 </label>
+                {profileImage && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute bottom-0 left-0 h-8 w-8 rounded-full shadow-lg"
+                    onClick={handleDeleteImage}
+                    disabled={isUploading || isDeleting || isSaving}
+                    aria-label="Delete profile photo"
+                  >
+                    {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  </Button>
+                )}
                 <input 
                   id="avatar-upload" 
                   type="file" 
                   className="hidden" 
                   accept="image/*" 
                   onChange={handleImageUpload} 
-                  disabled={isUploading}
+                  disabled={isUploading || isDeleting}
                 />
               </div>
               <p className="text-sm text-muted-foreground">Click the camera icon to upload a new photo</p>
@@ -232,15 +289,12 @@ export default function ProfilePage() {
                           src={aiAvatar} 
                           alt="AI Profile" 
                           className="w-full h-full object-cover"
+                          onError={() => setAiAvatar("")}
                         />
                       ) : (
-                        <img 
-                          src="https://api.dicebear.com/7.x/bottts/svg?seed=Maya&backgroundColor=b6e3f4,c0aede,d1d4f9" 
-                          alt="AI Default" 
-                          className="w-full h-full object-cover" 
-                        />
+                        <Bot className="w-10 h-10 text-muted-foreground" />
                       )}
-                      {isAiUploading && (
+                      {(isAiUploading || isAiDeleting) && (
                         <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
                           <Loader2 className="w-5 h-5 animate-spin text-primary" />
                         </div>
@@ -248,17 +302,32 @@ export default function ProfilePage() {
                     </div>
                     <label 
                       htmlFor="ai-avatar-upload" 
-                      className="absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full cursor-pointer hover:bg-primary/90 transition-all shadow-md"
+                      className={`absolute bottom-0 right-0 p-1.5 bg-primary text-white rounded-full cursor-pointer hover:bg-primary/90 transition-all shadow-md ${
+                        isAiUploading || isAiDeleting ? "pointer-events-none opacity-60" : ""
+                      }`}
                     >
                       {isAiUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
                     </label>
+                    {aiAvatar && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute bottom-0 left-0 h-7 w-7 rounded-full shadow-md"
+                        onClick={handleDeleteAiImage}
+                        disabled={isAiUploading || isAiDeleting || isSaving}
+                        aria-label="Delete AI avatar"
+                      >
+                        {isAiDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                      </Button>
+                    )}
                     <input 
                       id="ai-avatar-upload" 
                       type="file" 
                       className="hidden" 
                       accept="image/*" 
                       onChange={handleAiImageUpload} 
-                      disabled={isAiUploading}
+                      disabled={isAiUploading || isAiDeleting}
                     />
                   </div>
                   <div className="text-center">
@@ -316,7 +385,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="pt-4 space-y-4">
-                <Button type="submit" className="w-full h-12 text-lg shadow-lg hover:shadow-primary/20 transition-all" disabled={isSaving || isUploading || isAiUploading}>
+                <Button type="submit" className="w-full h-12 text-lg shadow-lg hover:shadow-primary/20 transition-all" disabled={isSaving || isUploading || isAiUploading || isDeleting || isAiDeleting}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save All Changes
                 </Button>
