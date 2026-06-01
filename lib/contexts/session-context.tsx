@@ -11,6 +11,7 @@ interface User {
   aiName?: string;
   aiBehavior?: string;
   aiAvatar?: string;
+  aiVoice?: string;
 }
 
 interface SessionContextType {

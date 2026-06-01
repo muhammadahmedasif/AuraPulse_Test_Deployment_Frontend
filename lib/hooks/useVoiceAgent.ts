@@ -18,7 +18,7 @@ export interface UseVoiceAgentReturn {
   resetVoiceSession: () => void;
 }
 
-export function useVoiceAgent(): UseVoiceAgentReturn {
+export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [state, setState] = useState<VoiceState>("idle");
@@ -149,14 +149,22 @@ export function useVoiceAgent(): UseVoiceAgentReturn {
     // Voice selection for better quality (Natural/Google voices)
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
-      // Prioritize natural sounding voices
-      const preferredVoice = voices.find(v => 
-        (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium")) && 
-        v.lang.startsWith("en")
-      ) || voices.find(v => v.lang.startsWith("en"));
+      let selectedVoice;
       
-      if (preferredVoice) {
-        utterance.voice = preferredVoice;
+      if (preferredVoiceUri) {
+        selectedVoice = voices.find(v => v.voiceURI === preferredVoiceUri);
+      }
+      
+      if (!selectedVoice) {
+        // Prioritize natural sounding voices
+        selectedVoice = voices.find(v => 
+          (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium")) && 
+          v.lang.startsWith("en")
+        ) || voices.find(v => v.lang.startsWith("en"));
+      }
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
       }
     }
 

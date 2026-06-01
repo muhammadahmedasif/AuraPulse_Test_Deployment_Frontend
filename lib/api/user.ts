@@ -10,6 +10,7 @@ export const updateProfile = async (data: {
   aiName?: string;
   aiBehavior?: string;
   aiAvatar?: string;
+  aiVoice?: string;
 }) => {
   const response = await fetch("/api/user/profile", {
     method: "PUT",

@@ -19,7 +19,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Bot, Sparkles, Heart, Zap, Coffee } from "lucide-react";
+import { Bot, Sparkles, Heart, Zap, Coffee, Play } from "lucide-react";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -30,6 +30,8 @@ export default function ProfilePage() {
   const [aiName, setAiName] = useState("Maya");
   const [aiBehavior, setAiBehavior] = useState("supportive");
   const [aiAvatar, setAiAvatar] = useState("");
+  const [aiVoice, setAiVoice] = useState("");
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isAiUploading, setIsAiUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -46,8 +48,23 @@ export default function ProfilePage() {
       setAiName(user.aiName || "Maya");
       setAiBehavior(user.aiBehavior || "supportive");
       setAiAvatar(user.aiAvatar || "");
+      setAiVoice(user.aiVoice || "");
     }
   }, [user]);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
+        setAvailableVoices(voices);
+      }
+    };
+
+    loadVoices();
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -143,6 +160,41 @@ export default function ProfilePage() {
     }
   };
 
+  const handleTestVoice = () => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      toast({
+        variant: "destructive",
+        title: "Not Supported",
+        description: "Text-to-speech is not supported in this browser.",
+      });
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    
+    const text = `Hello ${name || "friend"}, my name is ${aiName}. I'm your personal mental health support companion.`;
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    if (aiVoice) {
+      const selectedVoice = availableVoices.find(v => v.voiceURI === aiVoice);
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+    } else {
+      const defaultVoice = availableVoices.find(v => 
+        (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium"))
+      ) || availableVoices[0];
+      if (defaultVoice) {
+        utterance.voice = defaultVoice;
+      }
+    }
+    
+    utterance.rate = 0.88;
+    utterance.pitch = 0.95;
+    
+    window.speechSynthesis.speak(utterance);
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -153,7 +205,8 @@ export default function ProfilePage() {
         profileImage,
         aiName,
         aiBehavior,
-        aiAvatar
+        aiAvatar,
+        aiVoice
       });
       await checkSession();
       toast({
@@ -380,6 +433,39 @@ export default function ProfilePage() {
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>AI Voice</Label>
+                  <div className="flex gap-4">
+                    <Select value={aiVoice} onValueChange={setAiVoice}>
+                      <SelectTrigger className="bg-background border-primary/20 flex-1">
+                        <SelectValue placeholder="Select a voice" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableVoices.length > 0 ? (
+                          availableVoices.map((voice) => (
+                            <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
+                              {voice.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="default" disabled>
+                            Loading voices...
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleTestVoice}
+                      className="shrink-0"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Test Voice
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Brain,
@@ -284,6 +284,7 @@ export default function Dashboard() {
   });
   const [lastMoodScore, setLastMoodScore] = useState<number>(50);
   const [todayActivities, setTodayActivities] = useState<Activity[]>([]);
+  const hasAutoOpenedMoodRef = useRef(false);
 
   // Add this function to transform activities into day activity format
   const transformActivitiesToDayActivity = (
@@ -364,6 +365,10 @@ export default function Dashboard() {
         setShowActivityLogger(true);
       } else if (action === "breathing") {
         handleActivityTrigger("breathing", "notification");
+      } else if (action === "ocean") {
+        handleActivityTrigger("ocean", "notification");
+      } else if (action === "forest") {
+        handleActivityTrigger("forest", "notification");
       } else if (action === "zen") {
         handleActivityTrigger("zen", "notification");
       }
@@ -411,6 +416,12 @@ export default function Dashboard() {
         );
       } else if (latestMoodArr.length > 0) {
         moodScore = latestMoodArr[0].score ?? null;
+      }
+
+      // Auto-open mood modal if no mood logged today
+      if (todayMoods.length === 0 && !hasAutoOpenedMoodRef.current) {
+        setShowMoodModal(true);
+        hasAutoOpenedMoodRef.current = true;
       }
 
       // Split activities: in-app (game, therapy) vs check-ins (everything else)
@@ -523,7 +534,7 @@ export default function Dashboard() {
   };
 
   const handleActivityTrigger = (
-    activityType: "breathing" | "ocean" | "forest" | "zen",
+    activityType: string,
     triggerReason: string = "support"
   ) => {
     let type: "breathing" | "garden" | "forest" | "waves" = "breathing";
@@ -550,6 +561,12 @@ export default function Dashboard() {
         type = "garden";
         title = "Zen Garden";
         description = "Create and maintain your digital peaceful space";
+        break;
+      default:
+        // Fallback to breathing
+        type = "breathing";
+        title = "Breathing Patterns";
+        description = "Follow calming breathing exercises with visual guidance";
         break;
     }
 

@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useVoiceAgent } from "@/lib/hooks/useVoiceAgent";
+import { useSession } from "@/lib/contexts/session-context";
 import { cn } from "@/lib/utils";
 import { sendChatMessageStream, createChatSession } from "@/lib/api/chat";
 import {
@@ -110,7 +111,8 @@ export function VoiceModal({
   activityActive = false,
   onSessionChange,
 }: VoiceModalProps) {
-  const voice = useVoiceAgent();
+  const { user } = useSession();
+  const voice = useVoiceAgent(user?.aiVoice);
   const conversationModeRef = useRef(false);
   const autoResumeTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastTranscriptRef = useRef("");
@@ -218,7 +220,6 @@ export function VoiceModal({
             } else if (data.t === "done") {
               // ── Activity trigger detection (same as text chat) ──
               if (
-                data.metadata?.emotionMeta?.autoTrigger &&
                 data.metadata?.emotionMeta?.suggestedActivity &&
                 onActivityTrigger
               ) {

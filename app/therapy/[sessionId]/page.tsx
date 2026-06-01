@@ -358,7 +358,6 @@ export default function TherapyPage() {
 
               // Auto-trigger activity modal if backend says so
               if (
-                data.metadata?.emotionMeta?.autoTrigger &&
                 data.metadata?.emotionMeta?.suggestedActivity
               ) {
                 handleActivityTrigger(
