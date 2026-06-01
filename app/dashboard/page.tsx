@@ -180,12 +180,11 @@ const generateInsights = (activities: Activity[]) => {
     }
   }
 
-  // Check activity completion rate
+  // Check activity completion rate based on a weekly goal
+  const DAILY_ACTIVITY_GOAL = 3;
+  const WEEKLY_GOAL = DAILY_ACTIVITY_GOAL * 7;
   const completedActivities = recentActivities.filter((a) => a.completed);
-  const completionRate =
-    recentActivities.length > 0
-      ? (completedActivities.length / recentActivities.length) * 100
-      : 0;
+  const completionRate = Math.min((completedActivities.length / WEEKLY_GOAL) * 100, 100);
 
   if (completionRate >= 80) {
     insights.push({
@@ -419,12 +418,13 @@ export default function Dashboard() {
       const appActivities = allTodayActivities.filter((a: any) => appActivityTypes.includes(a.type));
       const checkInActivities = allTodayActivities.filter((a: any) => !appActivityTypes.includes(a.type));
 
-      // Completion rate based on check-in activities
+      // Completion rate based on check-in activities against a daily goal
+      const DAILY_ACTIVITY_GOAL = 3;
       const completedCount = checkInActivities.filter((a: any) => a.completed).length;
-      const completionRate =
-        checkInActivities.length > 0
-          ? Math.round((completedCount / checkInActivities.length) * 100)
-          : 0;
+      const completionRate = Math.min(
+        Math.round((completedCount / DAILY_ACTIVITY_GOAL) * 100),
+        100
+      );
 
       setDailyStats({
         moodScore,
