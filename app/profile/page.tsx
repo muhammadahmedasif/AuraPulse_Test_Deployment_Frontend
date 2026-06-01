@@ -19,7 +19,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
-import { Bot, Sparkles, Heart, Zap, Coffee, Play } from "lucide-react";
+import { Bot, Sparkles, Heart, Zap, Coffee, Play, Check, Volume2 } from "lucide-react";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -32,6 +32,7 @@ export default function ProfilePage() {
   const [aiAvatar, setAiAvatar] = useState("");
   const [aiVoice, setAiVoice] = useState("");
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [isTesting, setIsTesting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isAiUploading, setIsAiUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -55,14 +56,32 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadVoices = () => {
       if (typeof window !== "undefined" && window.speechSynthesis) {
-        const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
-        setAvailableVoices(voices);
+        const allVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
+        
+        // Deduplicate: On Android, many voice entries sound identical.
+        // Keep only one voice per unique name to avoid confusing the user.
+        const seen = new Set<string>();
+        const uniqueVoices = allVoices.filter(v => {
+          if (seen.has(v.name)) return false;
+          seen.add(v.name);
+          return true;
+        });
+        
+        setAvailableVoices(uniqueVoices);
       }
     };
 
     loadVoices();
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    // iOS workaround: warm up speechSynthesis with a silent utterance
+    // so that subsequent speak calls actually produce audio.
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      const warmUp = new SpeechSynthesisUtterance("");
+      warmUp.volume = 0;
+      window.speechSynthesis.speak(warmUp);
     }
   }, []);
 
@@ -171,12 +190,17 @@ export default function ProfilePage() {
     }
 
     window.speechSynthesis.cancel();
+
+    // iOS workaround: resume before speaking
+    try { window.speechSynthesis.resume(); } catch (e) {}
     
     const text = `Hello ${name || "friend"}, my name is ${aiName}. I'm your personal mental health support companion.`;
     const utterance = new SpeechSynthesisUtterance(text);
     
     if (aiVoice) {
-      const selectedVoice = availableVoices.find(v => v.voiceURI === aiVoice);
+      // Match by voiceURI first, then by name (cross-device compatibility)
+      const selectedVoice = availableVoices.find(v => v.voiceURI === aiVoice) 
+        || availableVoices.find(v => v.name === aiVoice);
       if (selectedVoice) {
         utterance.voice = selectedVoice;
       }
@@ -192,7 +216,22 @@ export default function ProfilePage() {
     utterance.rate = 0.88;
     utterance.pitch = 0.95;
     
+    setIsTesting(true);
+    utterance.onend = () => setIsTesting(false);
+    utterance.onerror = () => setIsTesting(false);
+    
     window.speechSynthesis.speak(utterance);
+
+    // iOS keep-alive workaround
+    const iosKeepAlive = setInterval(() => {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.resume();
+      } else {
+        clearInterval(iosKeepAlive);
+      }
+    }, 5000);
+    utterance.onend = () => { clearInterval(iosKeepAlive); setIsTesting(false); };
+    utterance.onerror = () => { clearInterval(iosKeepAlive); setIsTesting(false); };
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -438,7 +477,13 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <Label>AI Voice</Label>
-                  <div className="flex gap-4">
+                  {aiVoice && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-green-500" />
+                      <span>Selected: <strong>{availableVoices.find(v => v.voiceURI === aiVoice || v.name === aiVoice)?.name || aiVoice}</strong></span>
+                    </p>
+                  )}
+                  <div className="flex gap-3">
                     <Select value={aiVoice} onValueChange={setAiVoice}>
                       <SelectTrigger className="bg-background border-primary/20 flex-1">
                         <SelectValue placeholder="Select a voice" />
@@ -447,7 +492,12 @@ export default function ProfilePage() {
                         {availableVoices.length > 0 ? (
                           availableVoices.map((voice) => (
                             <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
-                              {voice.name}
+                              <div className="flex items-center gap-2">
+                                {(aiVoice === voice.voiceURI || aiVoice === voice.name) && (
+                                  <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                                )}
+                                <span>{voice.name}</span>
+                              </div>
                             </SelectItem>
                           ))
                         ) : (
@@ -461,10 +511,20 @@ export default function ProfilePage() {
                       type="button" 
                       variant="outline" 
                       onClick={handleTestVoice}
+                      disabled={isTesting}
                       className="shrink-0"
                     >
-                      <Play className="w-4 h-4 mr-2" />
-                      Test Voice
+                      {isTesting ? (
+                        <>
+                          <Volume2 className="w-4 h-4 mr-2 animate-pulse" />
+                          Playing...
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Test Voice
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>

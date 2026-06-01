@@ -135,6 +135,20 @@ export function VoiceModal({
     if (open && sessionId) {
       setCurrentSessionId(sessionId);
     }
+
+    // iOS workaround: warm up speechSynthesis when modal opens.
+    // iOS Safari requires a user-gesture-triggered speak() before audio works.
+    // Since the user clicked to open this modal, we piggyback a silent utterance.
+    if (open && typeof window !== "undefined" && window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+        const warmUp = new SpeechSynthesisUtterance("");
+        warmUp.volume = 0;
+        window.speechSynthesis.speak(warmUp);
+      } catch (e) {
+        // ignore
+      }
+    }
   }, [open, sessionId]);
 
   // ─── Activity Pause Synchronization ───────────────────────────────────

@@ -143,49 +143,120 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
     setState("speaking");
     window.speechSynthesis.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    
-    // Voice selection for better quality (Natural/Google voices)
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      let selectedVoice;
-      
-      if (preferredVoiceUri) {
-        selectedVoice = voices.find(v => v.voiceURI === preferredVoiceUri);
-      }
-      
-      if (!selectedVoice) {
-        // Prioritize natural sounding voices
-        selectedVoice = voices.find(v => 
-          (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium")) && 
-          v.lang.startsWith("en")
-        ) || voices.find(v => v.lang.startsWith("en"));
-      }
-      
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
+    // iOS workaround: speechSynthesis can get stuck in a paused state.
+    // Calling resume() before speaking ensures audio output works.
+    try {
+      window.speechSynthesis.resume();
+    } catch (e) {
+      // ignore — not all browsers support resume()
     }
 
-    // Calming therapeutic pace and tone
-    utterance.rate = 0.88; // Slightly slower for relaxation
-    utterance.pitch = 0.95; // Slightly lower for a warmer tone
-    utterance.volume = 1;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
 
-    utterance.onend = () => {
-      setState("idle");
-      onComplete?.();
+    // Helper to find and assign voice, then speak
+    const assignVoiceAndSpeak = () => {
+      const voices = window.speechSynthesis.getVoices();
+      
+      if (voices.length > 0) {
+        let selectedVoice: SpeechSynthesisVoice | undefined;
+
+        if (preferredVoiceUri) {
+          // Primary: exact voiceURI match
+          selectedVoice = voices.find(v => v.voiceURI === preferredVoiceUri);
+
+          // Fallback: match by voice name (cross-device compatibility)
+          if (!selectedVoice) {
+            selectedVoice = voices.find(v => v.name === preferredVoiceUri);
+          }
+        }
+
+        if (!selectedVoice) {
+          // Default fallback: prioritize natural sounding voices
+          selectedVoice = voices.find(v =>
+            (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium")) &&
+            v.lang.startsWith("en")
+          ) || voices.find(v => v.lang.startsWith("en"));
+        }
+
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
+      }
+
+      // Calming therapeutic pace and tone
+      utterance.rate = 0.88;
+      utterance.pitch = 0.95;
+      utterance.volume = 1;
+
+      utterance.onend = () => {
+        setState("idle");
+        onComplete?.();
+      };
+
+      utterance.onerror = (e) => {
+        // iOS sometimes fires 'interrupted' error on cancel — don't treat as real error
+        if (e.error === "interrupted" || e.error === "canceled") {
+          setState("idle");
+          onComplete?.();
+          return;
+        }
+        console.warn("TTS error:", e.error);
+        setState("idle");
+        onComplete?.();
+      };
+
+      synthRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+
+      // iOS bug workaround: speechSynthesis can pause itself after ~15s.
+      // Periodically call resume() to keep it alive.
+      const iosKeepAlive = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.resume();
+        } else {
+          clearInterval(iosKeepAlive);
+        }
+      }, 5000);
+
+      // Safety: clear interval when done
+      utterance.onend = () => {
+        clearInterval(iosKeepAlive);
+        setState("idle");
+        onComplete?.();
+      };
+      utterance.onerror = (e) => {
+        clearInterval(iosKeepAlive);
+        if (e.error === "interrupted" || e.error === "canceled") {
+          setState("idle");
+          onComplete?.();
+          return;
+        }
+        console.warn("TTS error:", e.error);
+        setState("idle");
+        onComplete?.();
+      };
     };
 
-    utterance.onerror = () => {
-      setState("idle");
-      onComplete?.();
-    };
-
-    synthRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-  }, []);
+    // Voices may not be loaded yet (especially on Android/iOS).
+    // If empty, wait for voiceschanged event before speaking.
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length === 0) {
+      const onVoicesReady = () => {
+        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
+        assignVoiceAndSpeak();
+      };
+      window.speechSynthesis.addEventListener("voiceschanged", onVoicesReady);
+      // Safety timeout: if voiceschanged never fires, speak anyway after 500ms
+      setTimeout(() => {
+        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
+        if (window.speechSynthesis.speaking) return; // already started
+        assignVoiceAndSpeak();
+      }, 500);
+    } else {
+      assignVoiceAndSpeak();
+    }
+  }, [preferredVoiceUri]);
 
   // Full cleanup + fresh reinitialization for modal reopen
   const resetVoiceSession = useCallback(() => {
