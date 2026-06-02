@@ -663,102 +663,102 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                    <div className="grid gap-2">
-                      {/* Primary Action: Chat */}
-                      <Button
-                        variant="default"
-                        style={{ backgroundColor: '#8CB5A2' }}
-                        className={cn(
-                          "w-full flex items-center justify-center p-4 h-auto group/button border-none",
-                          "transition-all duration-200 hover:opacity-90 hover:translate-y-[-1px] shadow-sm hover:shadow-md"
-                        )}
-                        onClick={handleStartTherapy}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-                            <MessageSquare className="w-4 h-4 text-white" />
+                  <div className="grid gap-2">
+                    {/* Primary Action: Chat */}
+                    <Button
+                      variant="default"
+                      style={{ backgroundColor: '#8CB5A2' }}
+                      className={cn(
+                        "w-full flex items-center justify-center p-4 h-auto group/button border-none",
+                        "transition-all duration-200 hover:opacity-90 hover:translate-y-[-1px] shadow-sm hover:shadow-md"
+                      )}
+                      onClick={handleStartTherapy}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                          <MessageSquare className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold text-base text-white">
+                            Open Up
                           </div>
-                          <div className="text-left">
-                            <div className="font-semibold text-base text-white">
-                              Open Up
-                            </div>
-                            <div className="text-[11px] text-white/90">
-                              Share what's on your mind.
-                            </div>
+                          <div className="text-[11px] text-white/90">
+                            Share what's on your mind.
                           </div>
                         </div>
-                      </Button>
+                      </div>
+                    </Button>
 
-                      {/* Primary Action: Voice */}
-                      <Button
-                        variant="default"
-                        style={{ backgroundColor: '#B5A2D1' }}
-                        className={cn(
-                          "w-full flex items-center justify-center p-4 h-auto group/voice border-none",
-                          "transition-all duration-200 hover:opacity-90 hover:translate-y-[-1px] shadow-sm hover:shadow-md"
-                        )}
-                        onClick={handleStartVoiceTherapy}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
-                            <Mic className="w-4 h-4 text-white" />
-                          </div>
-                          <div className="text-left">
-                            <div className="font-semibold text-base text-white">
-                              Speak Freely
-                            </div>
-                            <div className="text-[11px] text-white/90">
-                              Share your thoughts out loud and be heard.
-                            </div>
-                          </div>
+                    {/* Primary Action: Voice */}
+                    <Button
+                      variant="default"
+                      style={{ backgroundColor: '#B5A2D1' }}
+                      className={cn(
+                        "w-full flex items-center justify-center p-4 h-auto group/voice border-none",
+                        "transition-all duration-200 hover:opacity-90 hover:translate-y-[-1px] shadow-sm hover:shadow-md"
+                      )}
+                      onClick={handleStartVoiceTherapy}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                          <Mic className="w-4 h-4 text-white" />
                         </div>
-                      </Button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "flex flex-col h-[120px] px-4 py-3 group/mood hover:border-primary/50",
-                          "justify-center items-center text-center",
-                          "transition-all duration-200 group-hover:translate-y-[-2px]"
-                        )}
-                        onClick={() => setShowMoodModal(true)}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center mb-2">
-                          <Heart className="w-5 h-5 text-rose-500" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-sm">Track Mood</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            How are you feeling?
+                        <div className="text-left">
+                          <div className="font-semibold text-base text-white">
+                            Speak Freely
+                          </div>
+                          <div className="text-[11px] text-white/90">
+                            Share your thoughts out loud and be heard.
                           </div>
                         </div>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "flex flex-col h-[120px] px-4 py-3 group/ai hover:border-primary/50",
-                          "justify-center items-center text-center",
-                          "transition-all duration-200 group-hover:translate-y-[-2px]"
-                        )}
-                        onClick={handleAICheckIn}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mb-2">
-                          <BrainCircuit className="w-5 h-5 text-blue-500" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-sm">Check-in</div>
-                          <div className="text-xs text-muted-foreground mt-0.5">
-                            Quick wellness check
-                          </div>
-                        </div>
-                      </Button>
-
-                    </div>
+                      </div>
+                    </Button>
                   </div>
-                </CardContent>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "flex flex-col h-[120px] px-4 py-3 group/mood hover:border-primary/50",
+                        "justify-center items-center text-center",
+                        "transition-all duration-200 group-hover:translate-y-[-2px]"
+                      )}
+                      onClick={() => setShowMoodModal(true)}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center mb-2">
+                        <Heart className="w-5 h-5 text-rose-500" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Track Mood</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          How are you feeling?
+                        </div>
+                      </div>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "flex flex-col h-[120px] px-4 py-3 group/ai hover:border-primary/50",
+                        "justify-center items-center text-center",
+                        "transition-all duration-200 group-hover:translate-y-[-2px]"
+                      )}
+                      onClick={handleAICheckIn}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mb-2">
+                        <BrainCircuit className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">Check-in</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          Quick wellness check
+                        </div>
+                      </div>
+                    </Button>
+
+                  </div>
+                </div>
+              </CardContent>
             </Card>
 
             {/* Today's Overview Card */}
@@ -1043,9 +1043,9 @@ export default function Dashboard() {
                 <h3 className="text-lg font-semibold">{stressPrompt.activity.title}</h3>
                 <p className="text-sm text-muted-foreground">{stressPrompt.activity.description}</p>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="rounded-full shrink-0"
                 onClick={() => setStressPrompt(null)}
               >
