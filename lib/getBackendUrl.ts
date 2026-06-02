@@ -13,5 +13,16 @@ export function getBackendUrl(): string {
     );
   }
 
-  return backendUrl;
+  return backendUrl.replace(/\/+$/, "");
+}
+
+export function getBackendApiUrl(path: string): string {
+  const backendUrl = getBackendUrl();
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  if (backendUrl.endsWith("/api") && normalizedPath.startsWith("/api/")) {
+    return `${backendUrl}${normalizedPath.slice(4)}`;
+  }
+
+  return `${backendUrl}${normalizedPath}`;
 }
