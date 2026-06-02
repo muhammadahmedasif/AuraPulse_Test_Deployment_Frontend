@@ -336,6 +336,8 @@ export function VoiceModal({
 
   // ─── Handlers ─────────────────────────────────────────────────────────
   const handleMicClick = () => {
+    warmUpSpeechSynthesis(true);
+
     if (voice.state === "listening") {
       voice.stopListening();
     } else if (voice.state === "idle" && !isStreaming && !activityActive) {
@@ -344,6 +346,8 @@ export function VoiceModal({
   };
 
   const handleToggleConversationMode = () => {
+    warmUpSpeechSynthesis(true);
+
     const newMode = !isConversationMode;
     conversationModeRef.current = newMode;
     setIsConversationMode(newMode);
@@ -357,6 +361,8 @@ export function VoiceModal({
   };
 
   const handleManualSend = async () => {
+    warmUpSpeechSynthesis(true);
+
     const transcript = voice.getTranscript();
     if (transcript.trim()) {
       await sendMessage(transcript);
@@ -390,6 +396,7 @@ export function VoiceModal({
   const handleNewChat = async () => {
     if (isCreatingNewChat) return;
 
+    warmUpSpeechSynthesis(true);
     setIsCreatingNewChat(true);
 
     try {
@@ -520,6 +527,7 @@ export function VoiceModal({
             <div className="flex-[1.1] flex flex-col items-center justify-between p-4 md:p-8 border-b md:border-b-0 md:border-r border-border/50 h-[45%] md:h-full overflow-hidden shrink-0 md:shrink">
               <div className="flex-1 flex items-center justify-center">
                 <button
+                  onPointerDown={() => warmUpSpeechSynthesis(true)}
                   onClick={handleMicClick}
                   disabled={isStreaming || isConversationMode || activityActive}
                   className="cursor-pointer outline-none focus:ring-0 transition-transform active:scale-95"
@@ -616,6 +624,7 @@ export function VoiceModal({
                   isConversationMode && "bg-primary hover:bg-primary/90"
                 )}
                 onClick={handleToggleConversationMode}
+                onPointerDown={() => warmUpSpeechSynthesis(true)}
                 disabled={activityActive}
               >
                 <Zap className={cn("w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2", isConversationMode && "fill-current")} />
@@ -625,6 +634,7 @@ export function VoiceModal({
               {!isConversationMode && voice.transcript && (
                 <Button
                   onClick={handleManualSend}
+                  onPointerDown={() => warmUpSpeechSynthesis(true)}
                   disabled={isStreaming || activityActive}
                   size="sm"
                   className="rounded-full px-4 md:px-8 md:h-11 bg-primary hover:bg-primary/90 text-primary-foreground gentle-shadow text-xs md:text-sm"
@@ -638,6 +648,7 @@ export function VoiceModal({
                 variant="outline"
                 size="sm"
                 onClick={handleNewChat}
+                onPointerDown={() => warmUpSpeechSynthesis(true)}
                 disabled={isCreatingNewChat || activityActive}
                 className="rounded-full px-4 md:px-8 md:h-11 hover-lift text-xs md:text-sm"
               >

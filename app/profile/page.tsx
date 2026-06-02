@@ -511,7 +511,7 @@ export default function ProfilePage() {
                       <span>Selected: <strong>{findSpeechVoice(availableVoices, aiVoice)?.name || aiVoice}</strong></span>
                     </p>
                   )}
-                  <div className="flex gap-3">
+                  <div className="flex flex-col gap-3 items-center">
                     <Select value={aiVoice} onValueChange={setAiVoice}>
                       <SelectTrigger className="bg-background border-primary/20 flex-1">
                         <SelectValue placeholder="Select a voice" />

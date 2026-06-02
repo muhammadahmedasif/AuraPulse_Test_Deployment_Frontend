@@ -1,5 +1,8 @@
 export type SpeechPlatform = "ios" | "android" | "windows" | "other";
 
+let lastWarmUpAt = 0;
+let audioContext: AudioContext | null = null;
+
 export function getSpeechPlatform(): SpeechPlatform {
   if (typeof navigator === "undefined") return "other";
 
@@ -95,8 +98,38 @@ export function applyVoiceToUtterance(
   utterance.lang = selectedVoice.lang || "en-US";
 }
 
-export function warmUpSpeechSynthesis() {
+function resumeAudioContext() {
+  if (typeof window === "undefined") return;
+
+  const AudioContextCtor =
+    window.AudioContext || (window as any).webkitAudioContext;
+
+  if (!AudioContextCtor) return;
+
+  try {
+    audioContext = audioContext || new AudioContextCtor();
+
+    if (audioContext.state === "suspended") {
+      void audioContext.resume();
+    }
+
+    const source = audioContext.createBufferSource();
+    source.buffer = audioContext.createBuffer(1, 1, 22050);
+    source.connect(audioContext.destination);
+    source.start(0);
+  } catch (error) {
+    logSpeechDiagnostic("audio-context-unlock-failed", { error });
+  }
+}
+
+export function warmUpSpeechSynthesis(force = false) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+  const now = Date.now();
+  if (!force && now - lastWarmUpAt < 750) return;
+  lastWarmUpAt = now;
+
+  resumeAudioContext();
 
   try {
     window.speechSynthesis.resume();
@@ -107,9 +140,9 @@ export function warmUpSpeechSynthesis() {
   const platform = getSpeechPlatform();
 
   try {
-    const warmUp = new SpeechSynthesisUtterance(platform === "ios" ? " " : ".");
+    const warmUp = new SpeechSynthesisUtterance(".");
     warmUp.volume = platform === "ios" ? 0.01 : 0;
-    warmUp.rate = 1;
+    warmUp.rate = 1.1;
     warmUp.pitch = 1;
     warmUp.onstart = () => logSpeechDiagnostic("warmup-start");
     warmUp.onend = () => logSpeechDiagnostic("warmup-end");
