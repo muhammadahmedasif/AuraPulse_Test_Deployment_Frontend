@@ -21,6 +21,14 @@ import {
 } from "@/components/ui/select";
 import { Bot, Sparkles, Heart, Zap, Coffee, Play, Check, Volume2 } from "lucide-react";
 import Link from "next/link";
+import {
+  applyVoiceToUtterance,
+  findSpeechVoice,
+  getEnglishVoices,
+  getVoiceId,
+  logSpeechDiagnostic,
+  warmUpSpeechSynthesis,
+} from "@/lib/speechSynthesisUtils";
 
 export default function ProfilePage() {
   const { user, checkSession, logout } = useSession();
@@ -56,17 +64,22 @@ export default function ProfilePage() {
   useEffect(() => {
     const loadVoices = () => {
       if (typeof window !== "undefined" && window.speechSynthesis) {
-        const allVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
-        
-        // Deduplicate: On Android, many voice entries sound identical.
-        // Keep only one voice per unique name to avoid confusing the user.
+        const allVoices = getEnglishVoices();
+
+        // Deduplicate by stable voice id, not only by name. Android can expose
+        // different locales under similar names, and name-only storage loses accents.
         const seen = new Set<string>();
         const uniqueVoices = allVoices.filter(v => {
-          if (seen.has(v.name)) return false;
-          seen.add(v.name);
+          const id = getVoiceId(v);
+          if (seen.has(id)) return false;
+          seen.add(id);
           return true;
         });
-        
+
+        logSpeechDiagnostic("profile-voices-loaded", {
+          availableVoiceCount: uniqueVoices.length,
+          selectedVoice: aiVoice || "default",
+        });
         setAvailableVoices(uniqueVoices);
       }
     };
@@ -76,14 +89,11 @@ export default function ProfilePage() {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    // iOS workaround: warm up speechSynthesis with a silent utterance
-    // so that subsequent speak calls actually produce audio.
+    // Warm up speechSynthesis with a real tiny utterance for iOS Safari.
     if (typeof window !== "undefined" && window.speechSynthesis) {
-      const warmUp = new SpeechSynthesisUtterance("");
-      warmUp.volume = 0;
-      window.speechSynthesis.speak(warmUp);
+      warmUpSpeechSynthesis();
     }
-  }, []);
+  }, [aiVoice]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -200,36 +210,15 @@ export default function ProfilePage() {
     
     const text = `Hello ${name || "friend"}, my name is ${aiName}. I'm your personal mental health support companion.`;
     const utterance = new SpeechSynthesisUtterance(text);
-    
-    if (aiVoice) {
-      // Match by voice name first (more reliable across devices, especially Android)
-      let selectedVoice = availableVoices.find(v => v.name === aiVoice);
-      
-      // Fallback: match by voiceURI (for backwards compatibility)
-      if (!selectedVoice) {
-        selectedVoice = availableVoices.find(v => v.voiceURI === aiVoice);
-      }
-      
-      // Android fallback: partial name match
-      if (!selectedVoice && aiVoice.length > 0) {
-        selectedVoice = availableVoices.find(v => 
-          v.name.toLowerCase().includes(aiVoice.toLowerCase()) ||
-          aiVoice.toLowerCase().includes(v.name.toLowerCase())
-        );
-      }
-      
-      if (selectedVoice) {
-        utterance.voice = selectedVoice;
-      }
-    } else {
-      // Default voice selection
-      const defaultVoice = availableVoices.find(v => 
-        (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium"))
-      ) || availableVoices[0];
-      if (defaultVoice) {
-        utterance.voice = defaultVoice;
-      }
-    }
+
+    const selectedVoice = findSpeechVoice(availableVoices, aiVoice);
+    applyVoiceToUtterance(utterance, selectedVoice);
+    logSpeechDiagnostic("profile-test-voice", {
+      requestedVoice: aiVoice || "default",
+      selectedName: selectedVoice?.name || null,
+      selectedUri: selectedVoice ? getVoiceId(selectedVoice) : null,
+      selectedLang: selectedVoice?.lang || utterance.lang,
+    });
     
     utterance.rate = 0.88;
     utterance.pitch = 0.95;
@@ -242,9 +231,16 @@ export default function ProfilePage() {
       clearInterval(iosKeepAlive);
     };
     
+    utterance.onstart = () => {
+      logSpeechDiagnostic("profile-test-start", {
+        actualVoice: utterance.voice ? getVoiceId(utterance.voice) : null,
+        lang: utterance.lang,
+      });
+    };
     utterance.onend = onTestComplete;
     utterance.onerror = (e) => {
       if (e.error !== "interrupted" && e.error !== "canceled") {
+        logSpeechDiagnostic("profile-test-error", { error: e.error });
         console.warn("Test voice error:", e.error);
       }
       onTestComplete();
@@ -512,7 +508,7 @@ export default function ProfilePage() {
                   {aiVoice && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <Check className="w-3.5 h-3.5 text-green-500" />
-                      <span>Selected: <strong>{availableVoices.find(v => v.voiceURI === aiVoice || v.name === aiVoice)?.name || aiVoice}</strong></span>
+                      <span>Selected: <strong>{findSpeechVoice(availableVoices, aiVoice)?.name || aiVoice}</strong></span>
                     </p>
                   )}
                   <div className="flex gap-3">
@@ -523,12 +519,13 @@ export default function ProfilePage() {
                       <SelectContent>
                         {availableVoices.length > 0 ? (
                           availableVoices.map((voice) => (
-                            <SelectItem key={voice.name} value={voice.name}>
+                            <SelectItem key={getVoiceId(voice)} value={getVoiceId(voice)}>
                               <div className="flex items-center gap-2">
-                                {(aiVoice === voice.name || aiVoice === voice.voiceURI) && (
+                                {(aiVoice === getVoiceId(voice) || aiVoice === voice.name || aiVoice === voice.voiceURI) && (
                                   <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                 )}
                                 <span>{voice.name}</span>
+                                <span className="text-xs text-muted-foreground">({voice.lang})</span>
                               </div>
                             </SelectItem>
                           ))

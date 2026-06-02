@@ -17,6 +17,7 @@ import { useVoiceAgent } from "@/lib/hooks/useVoiceAgent";
 import { useSession } from "@/lib/contexts/session-context";
 import { cn } from "@/lib/utils";
 import { sendChatMessageStream, createChatSession } from "@/lib/api/chat";
+import { warmUpSpeechSynthesis } from "@/lib/speechSynthesisUtils";
 import {
   AlertCircle,
   Send,
@@ -136,49 +137,23 @@ export function VoiceModal({
       setCurrentSessionId(sessionId);
     }
 
-    // iOS workaround: warm up speechSynthesis when modal opens.
-    // iOS Safari requires a user-gesture-triggered speak() before audio works.
-    // Since the user clicked to open this modal, we piggyback a silent utterance.
-    // Also ensure voice list is loaded on first open.
+    // iOS Safari needs a user-gesture-triggered utterance before later TTS is audible.
     if (open && typeof window !== "undefined" && window.speechSynthesis) {
       try {
-        // First, try to resume in case it's paused
-        try {
-          window.speechSynthesis.resume();
-        } catch (e) {
-          // ignore
-        }
-
-        // Cancel any pending utterances
-        window.speechSynthesis.cancel();
-
-        // Wait a moment for voices to load (especially important on first open)
-        const initWarmup = () => {
-          try {
-            const warmUp = new SpeechSynthesisUtterance("");
-            warmUp.volume = 0;
-            window.speechSynthesis.speak(warmUp);
-          } catch (e) {
-            // ignore
-          }
-        };
-
-        // If voices aren't loaded yet, wait for them
         const voices = window.speechSynthesis.getVoices();
         if (voices.length === 0) {
           const onVoicesReady = () => {
             window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
-            initWarmup();
+            warmUpSpeechSynthesis();
           };
           window.speechSynthesis.addEventListener("voiceschanged", onVoicesReady);
-          
-          // Timeout after 1s
+
           setTimeout(() => {
             window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
-            initWarmup();
+            warmUpSpeechSynthesis();
           }, 1000);
         } else {
-          initWarmup();
+          warmUpSpeechSynthesis();
         }
       } catch (e) {
         // ignore

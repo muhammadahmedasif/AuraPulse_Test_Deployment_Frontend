@@ -1,4 +1,11 @@
 import { useCallback, useRef, useState } from "react";
+import {
+  applyVoiceToUtterance,
+  findSpeechVoice,
+  getSpeechPlatform,
+  getVoiceId,
+  logSpeechDiagnostic,
+} from "@/lib/speechSynthesisUtils";
 
 export type VoiceState = "idle" | "listening" | "processing" | "speaking" | "error";
 
@@ -141,7 +148,12 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
     }
 
     setState("speaking");
+    const platform = getSpeechPlatform();
     window.speechSynthesis.cancel();
+    logSpeechDiagnostic("speak-request", {
+      requestedVoice: preferredVoiceUri || "default",
+      textLength: text.length,
+    });
 
     // iOS workaround: speechSynthesis can get stuck in a paused state.
     // Calling resume() before speaking ensures audio output works.
@@ -152,57 +164,26 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
 
     // Helper to find and assign voice, then speak
-    const assignVoiceAndSpeak = () => {
+    const assignVoiceAndSpeak = (retryCount = 0) => {
       const voices = window.speechSynthesis.getVoices();
-      
-      if (voices.length > 0) {
-        let selectedVoice: SpeechSynthesisVoice | undefined;
+      const selectedVoice = findSpeechVoice(voices, preferredVoiceUri);
 
-        if (preferredVoiceUri) {
-          // Primary: try to match by name first (more reliable across devices)
-          const voiceName = preferredVoiceUri;
-          selectedVoice = voices.find(v => v.name === voiceName);
-
-          // Fallback: exact voiceURI match (for backwards compatibility)
-          if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.voiceURI === preferredVoiceUri);
-          }
-
-          // Android fallback: if voice name contains the preferred name
-          if (!selectedVoice && preferredVoiceUri.length > 0) {
-            selectedVoice = voices.find(v => 
-              v.name.toLowerCase().includes(preferredVoiceUri.toLowerCase()) ||
-              preferredVoiceUri.toLowerCase().includes(v.name.toLowerCase())
-            );
-          }
-        }
-
-        if (!selectedVoice) {
-          // Default fallback: prioritize natural sounding voices
-          // First try Google/Premium voices (better on Android and iOS)
-          selectedVoice = voices.find(v =>
-            (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium")) &&
-            v.lang.startsWith("en")
-          );
-          
-          // Fallback to any English voice
-          if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.lang.startsWith("en"));
-          }
-        }
-
-        if (selectedVoice) {
-          utterance.voice = selectedVoice;
-        }
-      }
+      applyVoiceToUtterance(utterance, selectedVoice);
 
       // Calming therapeutic pace and tone
       utterance.rate = 0.88;
       utterance.pitch = 0.95;
       utterance.volume = 1;
+
+      logSpeechDiagnostic("voice-selected", {
+        requestedVoice: preferredVoiceUri || "default",
+        selectedName: selectedVoice?.name || null,
+        selectedUri: selectedVoice ? getVoiceId(selectedVoice) : null,
+        selectedLang: selectedVoice?.lang || utterance.lang,
+        availableVoiceCount: voices.length,
+      });
 
       utterance.onend = () => {
         setState("idle");
@@ -224,6 +205,8 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
       synthRef.current = utterance;
       window.speechSynthesis.speak(utterance);
 
+      let started = false;
+
       // iOS bug workaround: speechSynthesis can pause itself after ~15s.
       // Periodically call resume() to keep it alive.
       const iosKeepAlive = setInterval(() => {
@@ -239,8 +222,19 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
       }, 5000);
 
       // Safety: clear interval when done
+      utterance.onstart = () => {
+        started = true;
+        logSpeechDiagnostic("start", {
+          actualVoice: utterance.voice ? getVoiceId(utterance.voice) : null,
+          lang: utterance.lang,
+          volume: utterance.volume,
+          rate: utterance.rate,
+          pitch: utterance.pitch,
+        });
+      };
       utterance.onend = () => {
         clearInterval(iosKeepAlive);
+        logSpeechDiagnostic("end");
         setState("idle");
         onComplete?.();
       };
@@ -251,10 +245,26 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
           onComplete?.();
           return;
         }
+        logSpeechDiagnostic("error", { error: e.error });
         console.warn("TTS error:", e.error);
         setState("idle");
         onComplete?.();
       };
+
+      if (platform === "ios") {
+        window.setTimeout(() => {
+          if (!started && synthRef.current === utterance && retryCount === 0) {
+            logSpeechDiagnostic("ios-start-timeout-retry");
+            try {
+              window.speechSynthesis.cancel();
+              window.speechSynthesis.resume();
+            } catch (error) {
+              logSpeechDiagnostic("ios-retry-resume-failed", { error });
+            }
+            assignVoiceAndSpeak(1);
+          }
+        }, 1500);
+      }
     };
 
     // Voices may not be loaded yet (especially on Android/iOS).
