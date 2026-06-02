@@ -103,6 +103,10 @@ export default function TherapyPage() {
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const messagesSessionIdRef = useRef<string | null>(null);
+  const activeSessionIdRef = useRef<string>("new");
+  const optimisticSessionIdRef = useRef<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -117,6 +121,14 @@ export default function TherapyPage() {
   const [activeSessionId, setActiveSessionId] = useState<string>("new");
   const [isCreatingSession, setIsCreatingSession] = useState(false);
 
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    activeSessionIdRef.current = activeSessionId;
+  }, [activeSessionId]);
+
   // 1. Initial mounting check
   useEffect(() => {
     setMounted(true);
@@ -125,7 +137,11 @@ export default function TherapyPage() {
   // 2a. Sync URL params to activeSessionId state (single source of truth)
   // This ensures activeSessionId stays in sync with actual URL
   useEffect(() => {
-    const newSessionId = params.sessionId as string;
+    const pathSessionId = window.location.pathname
+      .replace(/^\/therapy\/?/, "")
+      .split("/")[0];
+    const newSessionId = pathSessionId || (params.sessionId as string);
+
     if (newSessionId && newSessionId !== activeSessionId) {
       setActiveSessionId(newSessionId);
     }
@@ -151,6 +167,8 @@ export default function TherapyPage() {
   // Uses activeSessionId (state) instead of sessionId (stale params)
   useEffect(() => {
     const loadHistory = async () => {
+      const requestedSessionId = activeSessionId;
+
       if (!activeSessionId || activeSessionId === "new") {
         // If we're on "new" session, check for prefill in URL
         const searchParams = new URLSearchParams(window.location.search);
@@ -161,39 +179,68 @@ export default function TherapyPage() {
           window.history.replaceState(null, "", window.location.pathname);
         }
 
-        // Only clear messages if we don't have any (don't overwrite handleSubmit additions)
-        if (messages.length === 0) {
+        // Clear messages when navigating back to /therapy/new from an existing chat.
+        if (messagesSessionIdRef.current !== "new") {
+          messagesSessionIdRef.current = "new";
           setMessages([]);
         }
         setIsLoading(false);
         return;
       }
 
-      // Skip history load if we already have messages in this session
-      if (messages.length > 0) {
+      // Skip history load only when the current messages belong to this session.
+      if (
+        optimisticSessionIdRef.current === requestedSessionId ||
+        messagesSessionIdRef.current === requestedSessionId &&
+        messagesRef.current.length > 0
+      ) {
         setIsLoading(false);
         return;
       }
 
       try {
         setIsLoading(true);
-        const history = await getChatHistory(activeSessionId);
+        if (messagesSessionIdRef.current !== requestedSessionId) {
+          setMessages([]);
+        }
+        const history = await getChatHistory(requestedSessionId);
+
+        // Do not let a stale history request overwrite a newer navigation or
+        // the optimistic first exchange after /therapy/new creates a session.
+        if (activeSessionIdRef.current !== requestedSessionId) {
+          return;
+        }
+
+        if (
+          optimisticSessionIdRef.current === requestedSessionId ||
+          messagesSessionIdRef.current === requestedSessionId &&
+          messagesRef.current.length > 0
+        ) {
+          return;
+        }
 
         if (Array.isArray(history)) {
           const formattedHistory = history.map((msg) => ({
             ...msg,
             timestamp: new Date(msg.timestamp),
           }));
+          messagesSessionIdRef.current = requestedSessionId;
           setMessages(formattedHistory);
         } else {
+          messagesSessionIdRef.current = requestedSessionId;
           setMessages([]);
         }
       } catch (error: any) {
+        if (activeSessionIdRef.current !== requestedSessionId) {
+          return;
+        }
+
         console.error("Failed to load chat history:", error);
         const errMsg = error?.message || "";
         const content = (errMsg.includes("not found") || errMsg.includes("archived") || errMsg.includes("404"))
           ? "This chat session has been archived by the administrator and is no longer accessible."
           : "I apologize, but I'm having trouble loading the chat session.";
+        messagesSessionIdRef.current = requestedSessionId;
         setMessages([
           {
             role: "assistant",
@@ -202,7 +249,9 @@ export default function TherapyPage() {
           },
         ]);
       } finally {
-        setIsLoading(false);
+        if (activeSessionIdRef.current === requestedSessionId) {
+          setIsLoading(false);
+        }
       }
     };
     if (mounted) {
@@ -254,29 +303,50 @@ export default function TherapyPage() {
       return;
     }
 
-    // Use current state value (activeSessionId) as source of truth, not stale params
+    const isNewSession = activeSessionId === "new";
     let targetSessionId = activeSessionId;
 
     setMessage("");
     setIsThinking(true);
 
     try {
+      const userMessage: ChatMessage = {
+        role: "user",
+        content: currentMessage,
+        timestamp: new Date(),
+      };
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: "",
+        timestamp: new Date(),
+      };
+
+      const optimisticSessionId = isNewSession ? `pending-${Date.now()}` : targetSessionId;
+      const shouldAppendToCurrentMessages =
+        messagesSessionIdRef.current === optimisticSessionId;
+      optimisticSessionIdRef.current = optimisticSessionId;
+      messagesSessionIdRef.current = optimisticSessionId;
+      setMessages((prev) => {
+        const nextMessages = shouldAppendToCurrentMessages ? prev : [];
+        return [...nextMessages, userMessage, assistantMessage];
+      });
+
       // Create session only if we're on "new" and not already creating
-      if (activeSessionId === "new") {
+      if (isNewSession) {
         setIsCreatingSession(true);
         try {
           // 1. Create session in backend
           const newId = await createChatSession();
           targetSessionId = newId;
+          messagesSessionIdRef.current = newId;
+          optimisticSessionIdRef.current = newId;
+          activeSessionIdRef.current = newId;
 
-          // 2. Update state FIRST (before route change) to keep in sync
+          // 2. Keep local state and the URL in sync without remounting the page.
           setActiveSessionId(newId);
+          window.history.replaceState(null, "", `/therapy/${newId}`);
 
-          // 3. Update URL using Next.js router (triggers proper route change)
-          // This ensures useParams() gets updated, not just browser URL
-          router.replace(`/therapy/${newId}`);
-
-          // 4. Refresh sidebar in background
+          // 3. Refresh sidebar in background
           getAllChatSessions().then(setSessions).catch(console.error);
         } catch (error) {
           console.error("Failed to initialize session:", error);
@@ -288,24 +358,8 @@ export default function TherapyPage() {
         }
       }
 
-      // Add user message to UI IMMEDIATELY (before API call)
-      // This prevents history loading from clearing it
-      const userMessage: ChatMessage = {
-        role: "user",
-        content: currentMessage,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, userMessage]);
-
-      // Add empty assistant message immediately so we can stream into it
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "",
-          timestamp: new Date(),
-        },
-      ]);
+      optimisticSessionIdRef.current = targetSessionId;
+      messagesSessionIdRef.current = targetSessionId;
 
       // Stream the message to the correct session
       const response = await sendChatMessageStream(targetSessionId, currentMessage);
@@ -314,6 +368,65 @@ export default function TherapyPage() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+
+      const handleStreamLine = (line: string) => {
+        if (!line.trim()) return;
+
+        try {
+          const data = JSON.parse(line);
+
+          if (data.t === "chunk") {
+            // Hide thinking, start typing
+            setIsThinking(false);
+            setIsTyping(true);
+
+            // Append text chunk to the last message
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              if (lastMessage?.role === "assistant") {
+                newMessages[newMessages.length - 1] = {
+                  ...lastMessage,
+                  content: lastMessage.content + data.d,
+                };
+              }
+              return newMessages;
+            });
+            scrollToBottom();
+          } else if (data.t === "done") {
+            // Finalize message with metadata
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              const lastMessage = newMessages[newMessages.length - 1];
+              if (lastMessage?.role === "assistant") {
+                newMessages[newMessages.length - 1] = {
+                  ...lastMessage,
+                  metadata: {
+                    analysis: data.analysis,
+                    technique: data.metadata?.technique || "supportive",
+                    goal: data.metadata?.currentGoal || "Provide support",
+                    progress: data.metadata?.progress,
+                    emotionMeta: data.metadata?.emotionMeta,
+                  },
+                };
+              }
+              return newMessages;
+            });
+
+            // Auto-trigger activity modal if backend says so
+            if (
+              data.metadata?.emotionMeta?.suggestedActivity
+            ) {
+              handleActivityTrigger(
+                data.metadata.emotionMeta.suggestedActivity,
+                data.metadata.emotionMeta.emotion
+              );
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing NDJSON chunk:", e);
+        }
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -325,55 +438,15 @@ export default function TherapyPage() {
         buffer = lines.pop() || "";
 
         for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const data = JSON.parse(line);
-
-            if (data.t === "chunk") {
-              // Hide thinking, start typing
-              setIsThinking(false);
-              setIsTyping(true);
-
-              // Append text chunk to the last message
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                newMessages[newMessages.length - 1].content += data.d;
-                return newMessages;
-              });
-              scrollToBottom();
-            } else if (data.t === "done") {
-              // Finalize message with metadata
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                lastMessage.metadata = {
-                  analysis: data.analysis,
-                  technique: data.metadata?.technique || "supportive",
-                  goal: data.metadata?.currentGoal || "Provide support",
-                  progress: data.metadata?.progress,
-                  emotionMeta: data.metadata?.emotionMeta,
-                };
-                return newMessages;
-              });
-
-              // Auto-trigger activity modal if backend says so
-              if (
-                data.metadata?.emotionMeta?.suggestedActivity
-              ) {
-                handleActivityTrigger(
-                  data.metadata.emotionMeta.suggestedActivity,
-                  data.metadata.emotionMeta.emotion
-                );
-              }
-            }
-          } catch (e) {
-            console.error("Error parsing NDJSON chunk:", e);
-          }
+          handleStreamLine(line);
         }
       }
+      handleStreamLine(buffer);
 
       setIsThinking(false);
       setIsTyping(false);
+      optimisticSessionIdRef.current = null;
+      getAllChatSessions().then(setSessions).catch(console.error);
       scrollToBottom();
     } catch (error) {
       console.error("Error in chat:", error);
@@ -388,6 +461,7 @@ export default function TherapyPage() {
       ]);
       setIsThinking(false);
       setIsTyping(false);
+      optimisticSessionIdRef.current = null;
     }
   };
 
