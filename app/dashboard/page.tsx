@@ -23,6 +23,8 @@ import {
   Clock,
   Dumbbell,
   Mic,
+  LineChart,
+  ChevronRight,
 } from "lucide-react";
 import {
   Card,
@@ -59,6 +61,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import {
   addDays,
   format,
@@ -757,6 +760,28 @@ export default function Dashboard() {
                     </Button>
 
                   </div>
+
+                  <Button
+                    asChild
+                    variant="default"
+                    className={cn(
+                      "w-full flex bg-black/65 items-center justify-between p-4 h-auto group/progress border-none",
+                      "transition-all duration-200 hover:opacity-90 hover:translate-y-[-1px] shadow-sm hover:shadow-md"
+                    )}
+                  >
+                    <Link href="/progress">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+                          <LineChart className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold text-base text-white">Weekly Progress</div>
+                          <div className="text-[11px] text-white/90">View your insights & trends</div>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-white/80 group-hover/progress:translate-x-1 transition-transform" />
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
