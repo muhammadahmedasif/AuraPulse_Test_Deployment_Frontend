@@ -7,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { useSession } from "@/lib/contexts/session-context";
 import { useRouter } from "next/navigation";
+import { FaceEmotionLauncher } from "@/components/face-emotion/FaceEmotionLauncher";
 
 interface MoodFormProps {
   onSuccess?: () => void;
@@ -15,6 +16,8 @@ interface MoodFormProps {
 
 export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
   const [moodScore, setMoodScore] = useState(initialMoodScore);
+  const [moodSource, setMoodSource] = useState<"slider" | "camera">("slider");
+  const [categoricalMood, setCategoricalMood] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
 
   // Sync moodScore with initialMoodScore prop whenever it changes
@@ -58,7 +61,7 @@ export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ score: moodScore }),
+        body: JSON.stringify({ score: moodScore, source: moodSource, mood: categoricalMood }),
       });
 
 
@@ -120,7 +123,10 @@ export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
 
         <Slider
           value={[moodScore]}
-          onValueChange={(value) => setMoodScore(value[0])}
+          onValueChange={(value) => {
+            setMoodScore(value[0]);
+            setMoodSource("slider");
+          }}
           min={0}
           max={100}
           step={1}
@@ -128,23 +134,33 @@ export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
         />
       </div>
 
-      {/* Submit button */}
-      <Button
-        className="w-full"
-        onClick={handleSubmit}
-        disabled={isLoading || loading}
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Saving...
-          </>
-        ) : loading ? (
-          "Loading..."
-        ) : (
-          "Save Mood"
-        )}
-      </Button>
+      {/* Buttons */}
+      <div className="space-y-3">
+        <FaceEmotionLauncher 
+          className="w-full"
+          onMoodConfirmed={(score, mood) => {
+            setMoodScore(Math.round(score * 100));
+            setMoodSource("camera");
+            setCategoricalMood(mood);
+          }} 
+        />
+        <Button
+          className="w-full"
+          onClick={handleSubmit}
+          disabled={isLoading || loading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : loading ? (
+            "Loading..."
+          ) : (
+            "Save Mood"
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

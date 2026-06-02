@@ -42,6 +42,7 @@ import { ZenGarden } from "@/components/games/zen-garden";
 import { ForestGame } from "@/components/games/forest-game";
 import { OceanWaves } from "@/components/games/ocean-waves";
 import { X } from "lucide-react";
+import { FaceEmotionLauncher } from "@/components/face-emotion/FaceEmotionLauncher";
 
 export default function Home() {
   const router = useRouter();
@@ -54,6 +55,8 @@ export default function Home() {
   ];
 
   const [emotion, setEmotion] = useState(50);
+  const [moodSource, setMoodSource] = useState<"slider" | "camera">("slider");
+  const [categoricalMood, setCategoricalMood] = useState<string | undefined>();
   const [mounted, setMounted] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -125,7 +128,7 @@ export default function Home() {
     }
     try {
       setIsSavingMood(true);
-      await trackMood({ score: emotion, note: "" });
+      await trackMood({ score: emotion, note: "", source: moodSource, mood: categoricalMood });
       setMoodSaved(true);
       toast({
         title: "Mood saved! ✨",
@@ -330,7 +333,10 @@ export default function Home() {
               />
               <Slider
                 value={[emotion]}
-                onValueChange={(value) => setEmotion(value[0])}
+                onValueChange={(value) => {
+                  setEmotion(value[0]);
+                  setMoodSource("slider");
+                }}
                 min={0}
                 max={100}
                 step={1}
@@ -342,32 +348,42 @@ export default function Home() {
               <p className="text-sm text-muted-foreground animate-pulse">
                 Slide to express how you're feeling today
               </p>
-              {isAuthenticated && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full px-6 border-primary/30 hover:border-primary/60 hover:bg-primary/10 transition-all duration-300"
-                  onClick={handleSaveMood}
-                  disabled={isSavingMood}
-                >
-                  {isSavingMood ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : moodSaved ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4 text-green-500" />
-                      Mood Saved!
-                    </>
-                  ) : (
-                    <>
-                      <Heart className="mr-2 h-4 w-4" />
-                      Save Mood
-                    </>
-                  )}
-                </Button>
-              )}
+              
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
+                <FaceEmotionLauncher 
+                  onMoodConfirmed={(score, mood) => {
+                    setEmotion(Math.round(score * 100));
+                    setMoodSource("camera");
+                    setCategoricalMood(mood);
+                  }} 
+                />
+                {isAuthenticated && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full px-6 border-primary/30 hover:border-primary/60 hover:bg-primary/10 transition-all duration-300"
+                    onClick={handleSaveMood}
+                    disabled={isSavingMood}
+                  >
+                    {isSavingMood ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : moodSaved ? (
+                      <>
+                        <Check className="mr-2 h-4 w-4 text-green-500" />
+                        Mood Saved!
+                      </>
+                    ) : (
+                      <>
+                        <Heart className="mr-2 h-4 w-4" />
+                        Save Mood
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </motion.div>
 

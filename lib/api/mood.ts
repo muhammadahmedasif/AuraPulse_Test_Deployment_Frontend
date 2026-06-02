@@ -1,6 +1,8 @@
 interface MoodEntry {
   score: number;
   note?: string;
+  source?: string;
+  mood?: string;
 }
 
 interface MoodStats {
