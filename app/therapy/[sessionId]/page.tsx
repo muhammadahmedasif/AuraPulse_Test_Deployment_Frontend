@@ -49,6 +49,10 @@ import { formatDistanceToNow } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 import { useSession } from "@/lib/contexts/session-context";
 
+import { AutoMoodDetector } from "@/components/face-emotion/AutoMoodDetector";
+import { trackMood } from "@/lib/api/mood";
+import { Video, VideoOff } from "lucide-react";
+
 interface SuggestedQuestion {
   id: string;
   text: string;
@@ -116,6 +120,7 @@ export default function TherapyPage() {
   const [showNFTCelebration, setShowNFTCelebration] = useState(false);
   const [isCompletingSession, setIsCompletingSession] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [isAutoMoodEnabled, setIsAutoMoodEnabled] = useState(false);
 
   // SINGLE SOURCE OF TRUTH: activeSessionId state (replaces stale params.sessionId)
   const [activeSessionId, setActiveSessionId] = useState<string>("new");
@@ -538,6 +543,104 @@ export default function TherapyPage() {
     router.push(`/therapy/${selectedSessionId}`);
   };
 
+  const handleAutoMoodShift = async (score: number, mood: string) => {
+    try {
+      // Save it silently
+      await trackMood({ score: Math.round(score * 100), source: "camera", mood });
+      
+      // Inject system message to prompt AI, only if we are in an active chat
+      if (activeSessionId && activeSessionId !== "new" && !isTyping && !isThinking) {
+        const systemPrompt = `[SYSTEM_NOTE: The camera has auto-detected a mood shift to ${mood}. Please gently ask the user how they are feeling right now.]`;
+        
+        setIsThinking(true);
+        
+        // Optimistically add system message
+        const userMessage: ChatMessage = {
+          role: "user",
+          content: systemPrompt,
+          timestamp: new Date(),
+        };
+        const assistantMessage: ChatMessage = {
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        
+        // Stream the message
+        const response = await sendChatMessageStream(activeSessionId, systemPrompt);
+        if (!response.body) throw new Error("No response body");
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        const handleStreamLine = (line: string) => {
+          if (!line.trim()) return;
+          try {
+            const data = JSON.parse(line);
+            if (data.t === "chunk") {
+              setIsThinking(false);
+              setIsTyping(true);
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage?.role === "assistant") {
+                  newMessages[newMessages.length - 1] = {
+                    ...lastMessage,
+                    content: lastMessage.content + data.d,
+                  };
+                }
+                return newMessages;
+              });
+              scrollToBottom();
+            } else if (data.t === "done") {
+              setMessages((prev) => {
+                const newMessages = [...prev];
+                const lastMessage = newMessages[newMessages.length - 1];
+                if (lastMessage?.role === "assistant") {
+                  newMessages[newMessages.length - 1] = {
+                    ...lastMessage,
+                    metadata: {
+                      analysis: data.analysis,
+                      technique: data.metadata?.technique || "supportive",
+                      goal: data.metadata?.currentGoal || "Provide support",
+                      progress: data.metadata?.progress,
+                      emotionMeta: data.metadata?.emotionMeta,
+                    },
+                  };
+                }
+                return newMessages;
+              });
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            handleStreamLine(line);
+          }
+        }
+        handleStreamLine(buffer);
+        setIsThinking(false);
+        setIsTyping(false);
+        scrollToBottom();
+      }
+    } catch (e) {
+      console.error("Auto mood shift handle error:", e);
+      setIsThinking(false);
+      setIsTyping(false);
+    }
+  };
+
   const currentSession = sessions.find((s) => s.sessionId === activeSessionId);
   const currentTitle = currentSession?.title || "New Chat";
   const isSessionLocked = currentSession?.status === "completed" || currentSession?.status === "archived";
@@ -663,6 +766,25 @@ export default function TherapyPage() {
                 </p>
               </div>
             </div>
+
+            {/* Auto Mood Toggle & Detector */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant={isAutoMoodEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setIsAutoMoodEnabled(!isAutoMoodEnabled)}
+                className="h-8 text-xs gap-1"
+                title="Automatically detect mood in background"
+              >
+                {isAutoMoodEnabled ? <Video className="w-3 h-3" /> : <VideoOff className="w-3 h-3" />}
+                <span className="hidden sm:inline">Auto Mood</span>
+              </Button>
+              <AutoMoodDetector 
+                isActive={isAutoMoodEnabled && activeSessionId !== "new"} 
+                intervalMinutes={1} 
+                onMoodShiftDetected={handleAutoMoodShift} 
+              />
+            </div>
           </div>
 
           {messages.length === 0 ? (
@@ -730,12 +852,13 @@ export default function TherapyPage() {
             <div className="flex-1 overflow-y-auto scroll-smooth">
               <div className="max-w-3xl mx-auto px-4 py-6">
                 <AnimatePresence initial={false}>
-                  {messages.map((msg, index) => {
+                  {messages
+                    .filter(msg => !(msg.role === "user" && msg.content.startsWith("[SYSTEM_NOTE:")))
+                    .map((msg, index) => {
                     const isAssistant = msg.role === "assistant";
                     const avatarSrc = isAssistant 
                       ? user?.aiAvatar
                       : user?.profileImage;
-                    
                     const displayName = isAssistant ? (user?.aiName || "Maya") : (user?.name || "User");
 
                     return (
