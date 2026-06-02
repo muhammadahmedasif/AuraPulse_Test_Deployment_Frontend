@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
-
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +13,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const BACKEND_API_URL = getBackendUrl();
     const response = await fetch(`${BACKEND_API_URL}/chat/sessions`, {
       method: "POST",
       headers: {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error creating chat session:", error);
     return NextResponse.json(
-      { error: "Failed to create chat session" },
+      { error: "Failed to create chat session. Backend API is unavailable." },
       { status: 500 }
     );
   }
@@ -52,6 +52,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const BACKEND_API_URL = getBackendUrl();
     const response = await fetch(`${BACKEND_API_URL}/chat/sessions`, {
       method: "GET",
       headers: {
@@ -75,7 +76,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error fetching chat sessions:", error);
     return NextResponse.json(
-      { error: "Failed to fetch chat sessions" },
+      { error: "Failed to fetch chat sessions. Backend API is unavailable." },
       { status: 500 }
     );
   }

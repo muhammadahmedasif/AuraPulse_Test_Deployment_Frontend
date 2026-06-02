@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const API_URL = process.env.BACKEND_API_URL;
   const token = req.headers.get("Authorization");
 
   if (!token) {
@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const API_URL = getBackendUrl();
     const response = await fetch(`${API_URL}/api/emergency/status`, {
       method: "GET",
       headers: {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error fetching escalation status:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to fetch escalation status. Backend API is unavailable." },
       { status: 500 }
     );
   }

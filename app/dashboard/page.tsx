@@ -287,7 +287,27 @@ export default function Dashboard() {
   });
   const [lastMoodScore, setLastMoodScore] = useState<number>(50);
   const [todayActivities, setTodayActivities] = useState<Activity[]>([]);
-  const hasAutoOpenedMoodRef = useRef(false);
+
+  // Helper function to check if mood modal should be shown (once per 24 hours)
+  const shouldShowMoodModal = (): boolean => {
+    if (typeof window === "undefined") return false;
+    
+    const lastMoodModalTime = localStorage.getItem("lastMoodModalOpenTime");
+    if (!lastMoodModalTime) return true; // First time, show it
+    
+    const lastOpenTime = parseInt(lastMoodModalTime, 10);
+    const now = Date.now();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    
+    return now - lastOpenTime >= TWENTY_FOUR_HOURS;
+  };
+
+  // Helper function to record when mood modal was shown
+  const recordMoodModalOpen = (): void => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("lastMoodModalOpenTime", Date.now().toString());
+    }
+  };
 
   // Add this function to transform activities into day activity format
   const transformActivitiesToDayActivity = (
@@ -421,10 +441,10 @@ export default function Dashboard() {
         moodScore = latestMoodArr[0].score ?? null;
       }
 
-      // Auto-open mood modal if no mood logged today
-      if (todayMoods.length === 0 && !hasAutoOpenedMoodRef.current) {
+      // Auto-open mood modal if no mood logged today and 24 hours have passed since last modal open
+      if (todayMoods.length === 0 && shouldShowMoodModal()) {
         setShowMoodModal(true);
-        hasAutoOpenedMoodRef.current = true;
+        recordMoodModalOpen();
       }
 
       // Split activities: in-app (game, therapy) vs check-ins (everything else)
@@ -514,6 +534,7 @@ export default function Dashboard() {
         score: data.moodScore,
         note: "",
       });
+      recordMoodModalOpen(); // Record that mood was submitted
       setShowMoodModal(false);
     } catch (error) {
       console.error("Error saving mood:", error);
@@ -996,7 +1017,13 @@ export default function Dashboard() {
       </Container>
 
       {/* Mood tracking modal */}
-      <Dialog open={showMoodModal} onOpenChange={setShowMoodModal}>
+      <Dialog open={showMoodModal} onOpenChange={(open) => {
+        setShowMoodModal(open);
+        // Record the time when modal closes (whether by submit or dismiss)
+        if (!open) {
+          recordMoodModalOpen();
+        }
+      }}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>How are you feeling?</DialogTitle>

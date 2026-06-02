@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
-
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
 
 export async function PUT(req: NextRequest) {
   try {
@@ -12,6 +11,7 @@ export async function PUT(req: NextRequest) {
     }
 
     const body = await req.json();
+    const BACKEND_API_URL = getBackendUrl();
 
     const response = await fetch(`${BACKEND_API_URL}/user/profile`, {
       method: "PUT",
@@ -26,6 +26,6 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error("Error updating profile proxy:", error);
-    return NextResponse.json({ error: "Failed to update profile" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to update profile. Backend API is unavailable." }, { status: 500 });
   }
 }

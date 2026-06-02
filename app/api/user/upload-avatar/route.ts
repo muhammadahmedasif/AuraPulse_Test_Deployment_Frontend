@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
-
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +13,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     
     // We need to forward the multipart form data to the backend
+    const BACKEND_API_URL = getBackendUrl();
     const response = await fetch(`${BACKEND_API_URL}/user/upload-avatar`, {
       method: "POST",
       headers: {
@@ -26,6 +26,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error("Error uploading avatar proxy:", error);
-    return NextResponse.json({ error: "Failed to upload avatar" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to upload avatar. Backend API is unavailable." }, { status: 500 });
   }
 }

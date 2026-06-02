@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export async function POST(req: NextRequest) {
-  const API_URL = process.env.BACKEND_API_URL;
   const token = req.headers.get("Authorization");
 
   if (!token) {
@@ -9,6 +9,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const API_URL = getBackendUrl();
     const res = await fetch(`${API_URL}/auth/logout`, {
       method: "POST",
       headers: {
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data, { status: res.status });
   } catch (error) {
     return NextResponse.json(
-      { message: "Server error", error },
+      { message: "Failed to logout. Backend API is unavailable.", error },
       { status: 500 }
     );
   }

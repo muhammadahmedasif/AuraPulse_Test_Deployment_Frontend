@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
-
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
 
 export async function GET(
   req: NextRequest,
@@ -18,7 +17,7 @@ export async function GET(
       );
     }
 
-
+    const BACKEND_API_URL = getBackendUrl();
     const response = await fetch(
       `${BACKEND_API_URL}/chat/sessions/${sessionId}/history`,
       {
@@ -46,7 +45,7 @@ export async function GET(
   } catch (error) {
     console.error("Error getting chat history:", error);
     return NextResponse.json(
-      { error: "Failed to get chat history" },
+      { error: "Failed to get chat history. Backend API is unavailable." },
       { status: 500 }
     );
   }

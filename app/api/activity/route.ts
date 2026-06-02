@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  const API_URL = process.env.BACKEND_API_URL;
   const token = req.headers.get("Authorization");
 
   if (!token) {
@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const API_URL = getBackendUrl();
     const response = await fetch(`${API_URL}/activity`, {
       method: "POST",
       headers: {
@@ -43,14 +44,13 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error logging activity:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to log activity. Backend API is unavailable." },
       { status: 500 }
     );
   }
 }
 
 export async function GET(req: NextRequest) {
-  const API_URL = process.env.BACKEND_API_URL;
   const token = req.headers.get("Authorization");
 
   if (!token) {
@@ -58,8 +58,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const API_URL = getBackendUrl();
     const response = await fetch(`${API_URL}/activity`, {
-      method: "GET",
       headers: {
         Authorization: token,
       },
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error fetching activities:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to fetch activities. Backend API is unavailable." },
       { status: 500 }
     );
   }

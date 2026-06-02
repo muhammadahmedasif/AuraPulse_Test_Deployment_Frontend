@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
-
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
 
 export async function DELETE(
   req: NextRequest,
@@ -19,6 +18,7 @@ export async function DELETE(
       );
     }
 
+    const BACKEND_API_URL = getBackendUrl();
     const response = await fetch(
       `${BACKEND_API_URL}/chat/sessions/${sessionId}`,
       {
@@ -46,7 +46,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Error deleting chat session:", error);
     return NextResponse.json(
-      { error: "Failed to delete chat session" },
+      { error: "Failed to delete chat session. Backend API is unavailable." },
       { status: 500 }
     );
   }

@@ -192,19 +192,37 @@ export default function ProfilePage() {
     window.speechSynthesis.cancel();
 
     // iOS workaround: resume before speaking
-    try { window.speechSynthesis.resume(); } catch (e) {}
+    try { 
+      window.speechSynthesis.resume(); 
+    } catch (e) {
+      // ignore
+    }
     
     const text = `Hello ${name || "friend"}, my name is ${aiName}. I'm your personal mental health support companion.`;
     const utterance = new SpeechSynthesisUtterance(text);
     
     if (aiVoice) {
-      // Match by voiceURI first, then by name (cross-device compatibility)
-      const selectedVoice = availableVoices.find(v => v.voiceURI === aiVoice) 
-        || availableVoices.find(v => v.name === aiVoice);
+      // Match by voice name first (more reliable across devices, especially Android)
+      let selectedVoice = availableVoices.find(v => v.name === aiVoice);
+      
+      // Fallback: match by voiceURI (for backwards compatibility)
+      if (!selectedVoice) {
+        selectedVoice = availableVoices.find(v => v.voiceURI === aiVoice);
+      }
+      
+      // Android fallback: partial name match
+      if (!selectedVoice && aiVoice.length > 0) {
+        selectedVoice = availableVoices.find(v => 
+          v.name.toLowerCase().includes(aiVoice.toLowerCase()) ||
+          aiVoice.toLowerCase().includes(v.name.toLowerCase())
+        );
+      }
+      
       if (selectedVoice) {
         utterance.voice = selectedVoice;
       }
     } else {
+      // Default voice selection
       const defaultVoice = availableVoices.find(v => 
         (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium"))
       ) || availableVoices[0];
@@ -215,23 +233,37 @@ export default function ProfilePage() {
     
     utterance.rate = 0.88;
     utterance.pitch = 0.95;
+    utterance.volume = 1;
     
     setIsTesting(true);
-    utterance.onend = () => setIsTesting(false);
-    utterance.onerror = () => setIsTesting(false);
+    
+    const onTestComplete = () => {
+      setIsTesting(false);
+      clearInterval(iosKeepAlive);
+    };
+    
+    utterance.onend = onTestComplete;
+    utterance.onerror = (e) => {
+      if (e.error !== "interrupted" && e.error !== "canceled") {
+        console.warn("Test voice error:", e.error);
+      }
+      onTestComplete();
+    };
     
     window.speechSynthesis.speak(utterance);
 
     // iOS keep-alive workaround
     const iosKeepAlive = setInterval(() => {
       if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.resume();
+        try {
+          window.speechSynthesis.resume();
+        } catch (e) {
+          // ignore
+        }
       } else {
         clearInterval(iosKeepAlive);
       }
     }, 5000);
-    utterance.onend = () => { clearInterval(iosKeepAlive); setIsTesting(false); };
-    utterance.onerror = () => { clearInterval(iosKeepAlive); setIsTesting(false); };
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -491,9 +523,9 @@ export default function ProfilePage() {
                       <SelectContent>
                         {availableVoices.length > 0 ? (
                           availableVoices.map((voice) => (
-                            <SelectItem key={voice.voiceURI} value={voice.voiceURI}>
+                            <SelectItem key={voice.name} value={voice.name}>
                               <div className="flex items-center gap-2">
-                                {(aiVoice === voice.voiceURI || aiVoice === voice.name) && (
+                                {(aiVoice === voice.name || aiVoice === voice.voiceURI) && (
                                   <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
                                 )}
                                 <span>{voice.name}</span>

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
-
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,6 +10,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Authorization required" }, { status: 401 });
     }
 
+    const BACKEND_API_URL = getBackendUrl();
     const response = await fetch(`${BACKEND_API_URL}/user/me`, {
       method: "GET",
       headers: {
@@ -23,6 +23,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error("Error fetching user proxy:", error);
-    return NextResponse.json({ error: "Failed to fetch user" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch user. Backend API is unavailable." }, { status: 500 });
   }
 }

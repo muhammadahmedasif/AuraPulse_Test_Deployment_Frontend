@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
-
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +12,7 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     
+    const BACKEND_API_URL = getBackendUrl();
     const response = await fetch(`${BACKEND_API_URL}/user/upload-ai-avatar`, {
       method: "POST",
       headers: {
@@ -25,6 +25,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error("Error uploading AI avatar proxy:", error);
-    return NextResponse.json({ error: "Failed to upload AI avatar" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to upload AI avatar. Backend API is unavailable." }, { status: 500 });
   }
 }

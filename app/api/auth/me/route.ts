@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export async function GET(req: NextRequest) {
-  const API_URL = process.env.BACKEND_API_URL;
   const token = req.headers.get("Authorization");
 
   if (!token) {
@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const API_URL = getBackendUrl();
     const res = await fetch(`${API_URL}/auth/me`, {
       headers: {
         Authorization: token,
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     return NextResponse.json(
-      { message: "Server error", error },
+      { message: "Failed to fetch user data. Backend API is unavailable." },
       { status: 500 }
     );
   }

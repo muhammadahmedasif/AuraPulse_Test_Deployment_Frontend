@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export async function GET(req: NextRequest) {
-  const API_URL = process.env.BACKEND_API_URL;
   const token = req.headers.get("Authorization");
 
   if (!token) {
@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const period = searchParams.get("period") || "week";
+    const API_URL = getBackendUrl();
 
     const response = await fetch(`${API_URL}/mood/stats?period=${period}`, {
       method: "GET",
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("Error fetching mood stats:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to fetch mood stats. Backend API is unavailable." },
       { status: 500 }
     );
   }

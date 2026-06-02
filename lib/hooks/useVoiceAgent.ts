@@ -162,21 +162,36 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
         let selectedVoice: SpeechSynthesisVoice | undefined;
 
         if (preferredVoiceUri) {
-          // Primary: exact voiceURI match
-          selectedVoice = voices.find(v => v.voiceURI === preferredVoiceUri);
+          // Primary: try to match by name first (more reliable across devices)
+          const voiceName = preferredVoiceUri;
+          selectedVoice = voices.find(v => v.name === voiceName);
 
-          // Fallback: match by voice name (cross-device compatibility)
+          // Fallback: exact voiceURI match (for backwards compatibility)
           if (!selectedVoice) {
-            selectedVoice = voices.find(v => v.name === preferredVoiceUri);
+            selectedVoice = voices.find(v => v.voiceURI === preferredVoiceUri);
+          }
+
+          // Android fallback: if voice name contains the preferred name
+          if (!selectedVoice && preferredVoiceUri.length > 0) {
+            selectedVoice = voices.find(v => 
+              v.name.toLowerCase().includes(preferredVoiceUri.toLowerCase()) ||
+              preferredVoiceUri.toLowerCase().includes(v.name.toLowerCase())
+            );
           }
         }
 
         if (!selectedVoice) {
           // Default fallback: prioritize natural sounding voices
+          // First try Google/Premium voices (better on Android and iOS)
           selectedVoice = voices.find(v =>
             (v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium")) &&
             v.lang.startsWith("en")
-          ) || voices.find(v => v.lang.startsWith("en"));
+          );
+          
+          // Fallback to any English voice
+          if (!selectedVoice) {
+            selectedVoice = voices.find(v => v.lang.startsWith("en"));
+          }
         }
 
         if (selectedVoice) {
@@ -213,7 +228,11 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
       // Periodically call resume() to keep it alive.
       const iosKeepAlive = setInterval(() => {
         if (window.speechSynthesis.speaking) {
-          window.speechSynthesis.resume();
+          try {
+            window.speechSynthesis.resume();
+          } catch (e) {
+            // ignore
+          }
         } else {
           clearInterval(iosKeepAlive);
         }
@@ -247,12 +266,18 @@ export function useVoiceAgent(preferredVoiceUri?: string): UseVoiceAgentReturn {
         assignVoiceAndSpeak();
       };
       window.speechSynthesis.addEventListener("voiceschanged", onVoicesReady);
+      
       // Safety timeout: if voiceschanged never fires, speak anyway after 500ms
-      setTimeout(() => {
+      // This prevents the app from hanging on devices where voiceschanged doesn't fire
+      const timeoutId = setTimeout(() => {
         window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
-        if (window.speechSynthesis.speaking) return; // already started
-        assignVoiceAndSpeak();
+        if (!window.speechSynthesis.speaking) {
+          assignVoiceAndSpeak();
+        }
       }, 500);
+      
+      // Clear timeout if voiceschanged fires
+      utterance.onstart = () => clearTimeout(timeoutId);
     } else {
       assignVoiceAndSpeak();
     }

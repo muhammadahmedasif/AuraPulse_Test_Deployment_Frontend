@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const BACKEND_API_URL = process.env.BACKEND_API_URL;
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export async function POST(
   req: NextRequest,
@@ -26,6 +25,7 @@ export async function POST(
       );
     }
 
+    const BACKEND_API_URL = getBackendUrl();
     const response = await fetch(
       `${BACKEND_API_URL}/chat/sessions/${sessionId}/messages`,
       {
@@ -59,7 +59,7 @@ export async function POST(
   } catch (error) {
     console.error("Error sending message:", error);
     return NextResponse.json(
-      { error: "Failed to send message" },
+      { error: "Failed to send message. Backend API is unavailable." },
       { status: 500 }
     );
   }

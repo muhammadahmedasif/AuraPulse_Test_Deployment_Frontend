@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getBackendUrl } from "@/lib/getBackendUrl";
 
 export const dynamic = 'force-dynamic';
 
@@ -6,7 +7,6 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: { activityId: string } }
 ) {
-  const API_URL = process.env.BACKEND_API_URL;
   const token = req.headers.get("Authorization");
 
   if (!token) {
@@ -15,6 +15,7 @@ export async function DELETE(
 
   try {
     const { activityId } = params;
+    const API_URL = getBackendUrl();
 
     const response = await fetch(`${API_URL}/activity/${activityId}`, {
       method: "DELETE",
@@ -36,7 +37,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Error deleting activity:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to delete activity. Backend API is unavailable." },
       { status: 500 }
     );
   }
