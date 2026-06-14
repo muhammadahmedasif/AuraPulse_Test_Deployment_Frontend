@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { loginUser } from "@/lib/api/auth";
+import { loginUser, loginWithGoogle } from "@/lib/api/auth";
+import { GoogleButton } from "@/components/auth/google-button";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Container } from "@/components/ui/container";
@@ -41,6 +42,25 @@ export default function LoginPage() {
         err instanceof Error
           ? err.message
           : "Invalid email or password. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (accessToken: string) => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError("");
+    try {
+      const response = await loginWithGoogle(accessToken);
+      localStorage.setItem("token", response.token);
+      await checkSession();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      router.push("/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Google login failed."
       );
     } finally {
       setLoading(false);
@@ -127,6 +147,26 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
+
+          <div className="mt-6 flex flex-col items-center justify-center gap-4 w-full">
+            <div className="relative w-full">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-primary/10" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+            
+            <div className="w-full pt-2">
+              <GoogleButton
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Google login failed. Please try again.")}
+                text="Continue with Google"
+              />
+            </div>
+          </div>
+
           <div className="my-6 border-t border-primary/10" />
           <div className="flex flex-col items-center gap-2">
             <div className="flex items-center justify-center gap-2 text-sm">

@@ -28,6 +28,19 @@ export async function loginUser(email: string, password: string) {
   return res.json();
 }
 
+export async function loginWithGoogle(credential: string) {
+  const res = await fetch("/api/auth/google", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Google Login failed");
+  }
+  return res.json();
+}
+
 export async function forgotPassword(email: string) {
   const res = await fetch("/api/auth/forgot-password", {
     method: "POST",

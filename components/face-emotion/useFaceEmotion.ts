@@ -1,182 +1,146 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { detectEmotion, initializeFaceApi } from './faceApiService';
-import { mapExpressionsToMoodScore, getMoodCategory } from '@/lib/utils/moodMapper';
+/**
+ * useFaceEmotion.ts
+ * Central hook for face emotion detection using MediaPipe.
+ */
+
+import { useState, useRef, useCallback } from "react";
+import { initializeLandmarker, detectLandmarks, dispose } from "./mediapipeService";
+import { extractFeatures } from "./emotionFeatureExtractor";
+import { calculateRawScore, applyTemporalSmoothingStep, resetScoringState } from "./emotionScoringEngine";
+import { EmotionSmoothingEngine } from "./emotionSmoothingEngine";
+import { getMoodCategory } from "@/lib/utils/moodMapper";
 
 export function useFaceEmotion() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [liveScore, setLiveScore] = useState<number | null>(null);
-  const [liveMood, setLiveMood] = useState<string | null>(null);
-  const [isStable, setIsStable] = useState(false);
+  const [liveScore, setLiveScore] = useState<number>(50); // 0-100
+  const [liveMood, setLiveMood] = useState<string>("😊 Content");
+  const [isStable, setIsStableState] = useState(false);
   const isStableRef = useRef(false);
-  
-  const readingsRef = useRef<number[]>([]);
-  const detectionIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(0);
+
+  const setIsStable = useCallback((val: boolean) => {
+    setIsStableState(val);
+    isStableRef.current = val;
+  }, []);
+
+  // Engines: Window size 10 (0.5s), lock time 3000ms (3s)
+  const smoothingEngineRef = useRef(new EmotionSmoothingEngine(10, 3000));
 
   const stopCamera = useCallback(() => {
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    dispose();
+    
+    smoothingEngineRef.current.reset();
+    
+    setIsInitializing(false);
+    setIsStable(false);
+    setError(null);
   }, []);
 
-  /** Wait until the video element has loaded metadata and is playing. */
-  const waitForVideoReady = (): Promise<void> => {
-    return new Promise((resolve) => {
-      const video = videoRef.current;
-      if (!video) return resolve();
+  const processFrame = useCallback(async () => {
+    if (!videoRef.current) return;
 
-      // Already playing
-      if (video.readyState >= 2 && video.videoWidth > 0) {
-        return resolve();
+    try {
+      const result = detectLandmarks(videoRef.current);
+      if (result) {
+        // 2. Feature Extraction (Directly from Blendshapes)
+        const rawFeatures = extractFeatures(result.landmarks, result.blendshapes);
+
+        // 3. Score calculation
+        const rawScore = calculateRawScore(rawFeatures);
+        
+        // 4. EWMA temporal step to kill camera noise
+        const ewmaScore = applyTemporalSmoothingStep(rawScore);
+
+        // 5. Advanced Smoothing (Spike rejection, Rolling Window, Stability)
+        const { smoothedScore, isStable: stableNow } = smoothingEngineRef.current.processScore(ewmaScore, result.timestamp);
+        
+        if (!isStableRef.current) {
+          const finalScore = Math.max(0, Math.min(100, Math.round(smoothedScore)));
+          setLiveScore(finalScore);
+          setLiveMood(getMoodCategory(finalScore));
+          
+          if (stableNow) {
+            setIsStable(true);
+          }
+        }
       }
+    } catch (e) {
+      console.error("Frame processing error:", e);
+    }
 
-      const onReady = () => {
-        video.removeEventListener('loadeddata', onReady);
-        resolve();
-      };
-      video.addEventListener('loadeddata', onReady);
-
-      // Safety timeout: don't wait forever
-      setTimeout(resolve, 5000);
-    });
-  };
+    // ~20 FPS throttle using requestAnimationFrame loop
+    // In a strict implementation we might use setTimeout but rAF is better for battery
+    // We can throttle it slightly by doing it every 2nd frame roughly, but for now standard rAF is ~60fps
+    // Let's manually throttle to ~20 FPS.
+    await new Promise(r => setTimeout(r, 50)); 
+    animationFrameRef.current = requestAnimationFrame(processFrame);
+  }, []);
 
   const startCamera = useCallback(async () => {
     try {
-      setIsInitializing(true);
       setError(null);
-      readingsRef.current = [];
+      setIsInitializing(true);
       setIsStable(false);
-      isStableRef.current = false;
-      setLiveScore(null);
-      setLiveMood(null);
+      setLiveScore(50);
+      setLiveMood("😊 Content");
+      
+      smoothingEngineRef.current.reset();
+      resetScoringState();
 
-      // Get camera stream
-      if (!streamRef.current) {
-        console.log('[FaceEmotion] Requesting camera access…');
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          // Explicitly start playing
-          try {
-            await videoRef.current.play();
-          } catch (e) {
-            console.warn('[FaceEmotion] play() failed, will retry:', e);
-          }
-        }
+      await initializeLandmarker();
+
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: "user" 
+        } 
+      });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().then(() => {
+            setIsInitializing(false);
+            animationFrameRef.current = requestAnimationFrame(processFrame);
+          }).catch(e => {
+            console.error("Video play error:", e);
+            setError("Failed to play video");
+            setIsInitializing(false);
+          });
+        };
       } else {
-        console.log('[FaceEmotion] Reusing existing camera stream.');
+        setIsInitializing(false);
       }
-
-      // Load face-api models
-      console.log('[FaceEmotion] Loading face-api models…');
-      await initializeFaceApi();
-      console.log('[FaceEmotion] Models loaded.');
-
-      // Wait for video to actually be rendering frames
-      console.log('[FaceEmotion] Waiting for video to be ready…');
-      await waitForVideoReady();
-      console.log(
-        `[FaceEmotion] Video ready: ${videoRef.current?.videoWidth}x${videoRef.current?.videoHeight}, readyState=${videoRef.current?.readyState}`
-      );
-
-      startTimeRef.current = Date.now();
-      startDetectionLoop();
     } catch (err: any) {
-      console.error('[FaceEmotion] startCamera error:', err);
-      setError('Could not access camera or load models.');
-    } finally {
+      console.error("Camera start error:", err);
+      setError(err.message || "Failed to start camera");
       setIsInitializing(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [processFrame]);
 
-  const startDetectionLoop = () => {
-    if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
-    console.log('[FaceEmotion] Detection loop started (every 500 ms).');
-
-    detectionIntervalRef.current = setInterval(async () => {
-      if (!videoRef.current || isStableRef.current) return;
-      
-      // Ignore first 2 seconds for camera warmup
-      if (Date.now() - startTimeRef.current < 2000) return;
-
-      try {
-        const vw = videoRef.current.videoWidth;
-        const vh = videoRef.current.videoHeight;
-        const rs = videoRef.current.readyState;
-        console.log(`[FaceEmotion] Scan: ${vw}x${vh}, readyState=${rs}`);
-
-        if (rs < 4 || vw === 0) {
-          console.log('[FaceEmotion] Video not ready yet, skipping.');
-          return;
-        }
-
-        const expressions = await detectEmotion(videoRef.current);
-        if (expressions) {
-          const score = mapExpressionsToMoodScore(expressions);
-          setLiveScore(score);
-          setLiveMood(getMoodCategory(score));
-
-          readingsRef.current.push(score);
-          console.log(
-            `[FaceEmotion] ✅ Face detected! Score: ${score.toFixed(2)}, Readings: ${readingsRef.current.length}/5`
-          );
-
-          if (readingsRef.current.length >= 5) {
-            console.log('[FaceEmotion] 5 samples collected → finalizing.');
-            finalizeReadings();
-          }
-        } else {
-          console.log('[FaceEmotion] ⚠ No face/expressions detected this frame.');
-        }
-      } catch (err) {
-        console.error('[FaceEmotion] Detection error:', err);
-      }
+  const retry = useCallback(() => {
+    stopCamera();
+    setTimeout(() => {
+      startCamera();
     }, 500);
-  };
-
-  const finalizeReadings = () => {
-    if (detectionIntervalRef.current) {
-      clearInterval(detectionIntervalRef.current);
-      detectionIntervalRef.current = null;
-    }
-    
-    const readings = [...readingsRef.current];
-    // Remove outliers (sort, remove lowest and highest)
-    if (readings.length >= 5) {
-      readings.sort((a, b) => a - b);
-      readings.shift(); // remove lowest
-      readings.pop();   // remove highest
-    }
-    
-    const average = readings.reduce((a, b) => a + b, 0) / readings.length;
-    console.log(
-      `[FaceEmotion] Finalized: avg score = ${average.toFixed(2)}, mood = ${getMoodCategory(average)}`
-    );
-    setLiveScore(average);
-    setLiveMood(getMoodCategory(average));
-    setIsStable(true);
-    isStableRef.current = true;
-  };
-
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, [stopCamera]);
+  }, [startCamera, stopCamera]);
 
   return {
     videoRef,
@@ -187,6 +151,6 @@ export function useFaceEmotion() {
     isStable,
     startCamera,
     stopCamera,
-    retry: startCamera
+    retry
   };
 }

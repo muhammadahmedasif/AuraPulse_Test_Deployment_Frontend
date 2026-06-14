@@ -8,10 +8,13 @@ import { Container } from "@/components/ui/container";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Mail, User, Lock, Eye, EyeOff } from "lucide-react";
-import { registerUser } from "@/lib/api/auth";
+import { registerUser, loginWithGoogle } from "@/lib/api/auth";
+import { GoogleButton } from "@/components/auth/google-button";
+import { useSession } from "@/lib/contexts/session-context";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { checkSession } = useSession();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,6 +37,25 @@ export default function SignupPage() {
       router.push("/login");
     } catch (err: any) {
       setError(err.message || "Signup failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (accessToken: string) => {
+    if (!accessToken) return;
+    setLoading(true);
+    setError("");
+    try {
+      const response = await loginWithGoogle(accessToken);
+      localStorage.setItem("token", response.token);
+      await checkSession();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      router.push("/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Google signup failed."
+      );
     } finally {
       setLoading(false);
     }
@@ -172,6 +194,26 @@ export default function SignupPage() {
               {loading ? "Signing up..." : "Sign Up"}
             </Button>
           </form>
+
+          <div className="mt-6 flex flex-col items-center justify-center gap-4 w-full">
+            <div className="relative w-full">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-primary/10" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              </div>
+            </div>
+            
+            <div className="w-full pt-2">
+              <GoogleButton
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Google signup failed. Please try again.")}
+                text="Continue with Google"
+              />
+            </div>
+          </div>
+
           <div className="my-6 border-t border-primary/10" />
           <p className="text-base text-center text-muted-foreground">
             Already have an account?{" "}

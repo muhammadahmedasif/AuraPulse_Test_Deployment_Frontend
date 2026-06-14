@@ -71,7 +71,7 @@ export function FaceEmotionModal({ isOpen, onClose, onConfirm }: FaceEmotionModa
 
           {!isInitializing && !isStable && !error && liveScore !== null && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur px-4 py-2 rounded-full text-sm font-medium">
-              Detecting... {liveMood} ({Math.round(liveScore * 100)}%)
+              Detecting... {liveMood} ({liveScore})
             </div>
           )}
           
@@ -80,7 +80,7 @@ export function FaceEmotionModal({ isOpen, onClose, onConfirm }: FaceEmotionModa
               <div className="text-center mb-6">
                 <p className="text-muted-foreground mb-1">Suggested Mood</p>
                 <h3 className="text-3xl font-bold capitalize text-primary">{liveMood}</h3>
-                <p className="text-xl mt-2">{Math.round(liveScore! * 100)} / 100</p>
+                <p className="text-xl mt-2">{liveScore} / 100</p>
               </div>
               
               <div className="flex gap-4">

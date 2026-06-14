@@ -1,29 +1,33 @@
-export function mapExpressionsToMoodScore(expressions: { happy?: number; neutral?: number; sad?: number; angry?: number; surprised?: number; [key: string]: any }): number {
-  if (!expressions) return 0.5;
+/**
+ * moodMapper.ts
+ * Maps integer scores to emotion labels.
+ */
 
-  const happy = expressions.happy || 0;
-  const neutral = expressions.neutral || 0;
-  const sad = expressions.sad || 0;
-  const angry = expressions.angry || 0;
-  const surprised = expressions.surprised || 0;
-  
-  const rawScore = 
-    (happy * 1.0) +
-    (surprised * 0.6) +
-    (neutral * 0.5) +
-    (angry * 0.1) +
-    (sad * 0.0);
-    
-  const totalWeight = happy + surprised + neutral + angry + sad;
-  
-  if (totalWeight === 0) return 0.5;
-  
-  const normalizedScore = rawScore / totalWeight;
-  return Math.min(Math.max(normalizedScore, 0), 1);
+/**
+ * Score Range	Emotion Label
+ * 0–15	😔 Down
+ * 16–35	😟 Stressed
+ * 36–48	😕 Uneasy
+ * 49–55	😐 Neutral
+ * 56–70	😌 Calm
+ * 71–85	😊 Happy
+ * 86–100	✨ Excited
+ */
+export function getMoodCategory(score: number): string {
+  if (score <= 15) return "😔 Down";
+  if (score <= 35) return "😟 Stressed";
+  if (score <= 48) return "😕 Uneasy";
+  if (score <= 55) return "😐 Neutral";
+  if (score <= 70) return "😌 Calm";
+  if (score <= 85) return "😊 Happy";
+  return "✨ Excited";
 }
 
-export function getMoodCategory(score: number): string {
-  if (score >= 0.7) return "positive";
-  if (score <= 0.4) return "negative";
-  return "neutral";
+/**
+ * Backward-compat: returns simple category for DB/chat system
+ */
+export function getSimpleMoodCategory(score: number): string {
+  if (score <= 40) return "negative";
+  if (score <= 60) return "neutral";
+  return "positive";
 }

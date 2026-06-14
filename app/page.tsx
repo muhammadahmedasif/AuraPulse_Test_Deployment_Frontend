@@ -352,7 +352,7 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
                 <FaceEmotionLauncher 
                   onMoodConfirmed={(score, mood) => {
-                    setEmotion(Math.round(score * 100));
+                    setEmotion(score);
                     setMoodSource("camera");
                     setCategoricalMood(mood);
                   }} 

@@ -139,7 +139,7 @@ export function MoodForm({ onSuccess, initialMoodScore = 50 }: MoodFormProps) {
         <FaceEmotionLauncher 
           className="w-full"
           onMoodConfirmed={(score, mood) => {
-            setMoodScore(Math.round(score * 100));
+            setMoodScore(score);
             setMoodSource("camera");
             setCategoricalMood(mood);
           }} 

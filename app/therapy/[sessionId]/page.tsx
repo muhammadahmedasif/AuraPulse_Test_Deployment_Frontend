@@ -546,7 +546,7 @@ export default function TherapyPage() {
   const handleAutoMoodShift = async (score: number, mood: string) => {
     try {
       // Save it silently
-      await trackMood({ score: Math.round(score * 100), source: "camera", mood });
+      await trackMood({ score, source: "camera", mood });
       
       // Inject system message to prompt AI, only if we are in an active chat
       if (activeSessionId && activeSessionId !== "new" && !isTyping && !isThinking) {

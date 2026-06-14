@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { Toaster } from "@/components/ui/toaster";
 import { Providers } from "@/components/providers";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 // Initialize the fonts
 const inter = Inter({
@@ -26,12 +27,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <Providers>
-          <Header />
-          <main>{children}</main>
-          <Footer />
-          <Toaster />
-        </Providers>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+          <Providers>
+            <Header />
+            <main>{children}</main>
+            <Footer />
+            <Toaster />
+          </Providers>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );
