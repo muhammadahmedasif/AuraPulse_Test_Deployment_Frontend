@@ -1,23 +1,26 @@
 /**
  * moodMapper.ts
  * Maps integer scores to emotion labels.
+ * 
+ * The Neutral zone (44-56) is intentionally wide to accommodate
+ * the natural micro-fluctuations of a resting face.
  */
 
 /**
- * Score Range	Emotion Label
- * 0–15	😔 Down
- * 16–35	😟 Stressed
- * 36–48	😕 Uneasy
- * 49–55	😐 Neutral
- * 56–70	😌 Calm
- * 71–85	😊 Happy
- * 86–100	✨ Excited
+ * Score Range  Emotion Label
+ * 0–14         😔 Down
+ * 15–30        😟 Stressed
+ * 31–43        😕 Uneasy
+ * 44–56        😐 Neutral
+ * 57–70        😌 Calm
+ * 71–85        😊 Happy
+ * 86–100       ✨ Excited
  */
 export function getMoodCategory(score: number): string {
-  if (score <= 15) return "😔 Down";
-  if (score <= 35) return "😟 Stressed";
-  if (score <= 48) return "😕 Uneasy";
-  if (score <= 55) return "😐 Neutral";
+  if (score <= 14) return "😔 Down";
+  if (score <= 30) return "😟 Stressed";
+  if (score <= 43) return "😕 Uneasy";
+  if (score <= 56) return "😐 Neutral";
   if (score <= 70) return "😌 Calm";
   if (score <= 85) return "😊 Happy";
   return "✨ Excited";

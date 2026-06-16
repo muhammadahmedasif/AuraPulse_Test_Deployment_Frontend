@@ -27,8 +27,8 @@ export function useFaceEmotion() {
     isStableRef.current = val;
   }, []);
 
-  // Engines: Window size 10 (0.5s), lock time 3000ms (3s)
-  const smoothingEngineRef = useRef(new EmotionSmoothingEngine(10, 3000));
+  // Engines: Window size 12 (~0.6s at 20fps), lock time 3000ms (3s)
+  const smoothingEngineRef = useRef(new EmotionSmoothingEngine(12, 3000));
 
   const stopCamera = useCallback(() => {
     if (animationFrameRef.current) {

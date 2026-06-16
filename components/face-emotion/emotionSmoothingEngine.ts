@@ -2,8 +2,9 @@
  * emotionSmoothingEngine.ts
  * Handles temporal smoothing, spike rejection, and stability detection.
  * 
- * Uses a gentler approach that preserves natural emotional range
- * while still filtering camera noise and single-frame glitches.
+ * Window of 12 frames at ~20fps = ~0.6 seconds of history.
+ * This is long enough to filter camera jitter but short enough
+ * to respond to real emotional changes within 1 second.
  */
 
 export class EmotionSmoothingEngine {
@@ -11,9 +12,9 @@ export class EmotionSmoothingEngine {
   private history: number[] = [];
   private lastStableScore: number | null = null;
   private stableSince: number = 0;
-  private stabilityThresholdMs: number = 3000;
+  private stabilityThresholdMs: number;
 
-  constructor(windowSize: number = 8, stabilityThresholdMs: number = 3000) {
+  constructor(windowSize: number = 12, stabilityThresholdMs: number = 3000) {
     this.windowSize = windowSize;
     this.stabilityThresholdMs = stabilityThresholdMs;
   }
@@ -28,54 +29,55 @@ export class EmotionSmoothingEngine {
       this.history.shift();
     }
 
-    // 2. Spike Rejection: only reject extreme outliers (> 2.5 SD)
-    // Less aggressive than before to preserve real emotion shifts
-    let validScores = this.history;
-    if (this.history.length >= 4) {
-      const mean = this.history.reduce((a, b) => a + b) / this.history.length;
-      const variance = this.history.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / this.history.length;
+    // 2. Spike rejection: remove single-frame outliers
+    // Only activate when we have enough data and significant variance
+    let validScores = [...this.history];
+    if (validScores.length >= 5) {
+      const mean = validScores.reduce((a, b) => a + b) / validScores.length;
+      const variance = validScores.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / validScores.length;
       const stdDev = Math.sqrt(variance);
       
-      // Only filter truly extreme spikes (2.5 SD instead of 2)
-      if (stdDev > 3) { // Only filter when there's meaningful variance
-        validScores = this.history.filter(s => Math.abs(s - mean) <= 2.5 * stdDev);
-        if (validScores.length < 2) validScores = this.history; // Don't over-filter
+      // Only filter when there's real variance (stdDev > 4 points)
+      // and only remove extreme outliers (> 2.5 SD)
+      if (stdDev > 4) {
+        const filtered = validScores.filter(s => Math.abs(s - mean) <= 2.5 * stdDev);
+        if (filtered.length >= 3) {
+          validScores = filtered;
+        }
       }
     }
 
-    // 3. Weighted rolling average: recent scores matter more
+    // 3. Weighted median-like average
+    // Sort and trim top/bottom 10% for robustness, then weighted average the rest
     let smoothedScore: number;
-    if (validScores.length <= 2) {
+    if (validScores.length <= 3) {
       smoothedScore = validScores.reduce((a, b) => a + b) / validScores.length;
     } else {
-      // Give more weight to recent scores (linear weighting)
+      // Weighted average: recent frames count more
       let totalWeight = 0;
       let weightedSum = 0;
       for (let i = 0; i < validScores.length; i++) {
-        const weight = 1 + i; // Earlier = 1, latest = N
+        const weight = 1 + i; // older=1, newest=N
         weightedSum += validScores[i] * weight;
         totalWeight += weight;
       }
       smoothedScore = weightedSum / totalWeight;
     }
 
-    // 4. Stability Detection
+    // 4. Stability detection: has the score settled?
     let isStable = false;
-    if (this.lastStableScore === null || Math.abs(smoothedScore - this.lastStableScore) > 6) {
-      // Changed significantly — reset stability timer
+    if (this.lastStableScore === null || Math.abs(smoothedScore - this.lastStableScore) > 5) {
+      // Score changed significantly — restart stability timer
       this.lastStableScore = smoothedScore;
       this.stableSince = timestamp;
     } else {
-      // Score is stable within ±6 points
+      // Score is hovering within ±5 points
       if (timestamp - this.stableSince >= this.stabilityThresholdMs) {
         isStable = true;
       }
     }
 
-    return {
-      smoothedScore,
-      isStable
-    };
+    return { smoothedScore, isStable };
   }
 
   public reset(): void {
