@@ -16,7 +16,7 @@ interface AutoMoodDetectorProps {
 
 export function AutoMoodDetector({
   isActive,
-  intervalMinutes = process.env.NODE_ENV === "production" ? 60 : 1,
+  intervalMinutes = process.env.NODE_ENV === "production" ? 15 : 0.1667,
   onMoodShiftDetected,
 }: AutoMoodDetectorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -24,7 +24,7 @@ export function AutoMoodDetector({
   const animationFrameRef = useRef<number | null>(null);
   const checkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  
+
   const isRunningRef = useRef(false);
   const lastMoodRef = useRef<string | null>(null);
 
@@ -52,10 +52,10 @@ export function AutoMoodDetector({
         if (v.readyState >= 2) return resolve();
         const h = () => { v.removeEventListener("loadeddata", h); resolve(); };
         v.addEventListener("loadeddata", h);
-        setTimeout(resolve, 4000); 
+        setTimeout(resolve, 4000);
       });
 
-      await videoRef.current.play().catch(() => {});
+      await videoRef.current.play().catch(() => { });
       return true;
     } catch (err) {
       console.error("[AutoMood] Camera error:", err);
@@ -96,7 +96,7 @@ export function AutoMoodDetector({
 
       // We'll run MediaPipe until stable or timeout
       const smoothingEngine = new EmotionSmoothingEngine(10, 2000); // 2s stability needed
-      
+
       const startTime = performance.now();
       const maxDuration = 10000; // 10s max
 
@@ -105,29 +105,29 @@ export function AutoMoodDetector({
       await new Promise<void>((resolve) => {
         const detectFrame = async () => {
           if (!videoRef.current || videoRef.current.readyState < 2) {
-             animationFrameRef.current = requestAnimationFrame(detectFrame);
-             return;
+            animationFrameRef.current = requestAnimationFrame(detectFrame);
+            return;
           }
 
           const now = performance.now();
           if (now - startTime > maxDuration) {
-             console.log("[AutoMood] Timeout reaching stable score.");
-             resolve();
-             return;
+            console.log("[AutoMood] Timeout reaching stable score.");
+            resolve();
+            return;
           }
 
           const result = detectLandmarks(videoRef.current);
           if (result) {
-            const rawFeatures = extractFeatures(result.landmarks);
+            const rawFeatures = extractFeatures(result.landmarks, result.blendshapes);
             // Skipping calibration here for background checks, or assuming neutral baseline.
             // Using raw features directly for background checks is acceptable.
             const rawScore = calculateRawScore(rawFeatures);
             const { smoothedScore, isStable } = smoothingEngine.processScore(rawScore, result.timestamp);
 
             if (isStable) {
-               finalAvgScore = smoothedScore;
-               resolve();
-               return;
+              finalAvgScore = smoothedScore;
+              resolve();
+              return;
             }
           }
 
@@ -144,19 +144,15 @@ export function AutoMoodDetector({
 
         console.log(`[AutoMood] 🎯 Final: score=${avg}, mood=${mood}`);
 
-        if (mood !== lastMoodRef.current) {
-          lastMoodRef.current = mood;
-          toastRef.current({
-            title: "🎭 Auto Mood Detected",
-            description: `Your mood has been detected as: ${mood}`,
-            duration: 4000,
-          });
-          callbackRef.current(avg, mood);
-        } else {
-          console.log(`[AutoMood] Mood unchanged (${mood}), skipping save.`);
-        }
+        lastMoodRef.current = mood;
+        toastRef.current({
+          title: "🎭 Auto Mood Detected",
+          description: `Your mood has been detected as: ${mood}`,
+          duration: 4000,
+        });
+        callbackRef.current(avg, mood);
       } else {
-         console.log(`[AutoMood] Could not get a stable reading.`);
+        console.log(`[AutoMood] Could not get a stable reading.`);
       }
 
     } catch (err) {

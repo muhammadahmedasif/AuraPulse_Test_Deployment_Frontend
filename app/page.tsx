@@ -350,13 +350,15 @@ export default function Home() {
               </p>
               
               <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
-                <FaceEmotionLauncher 
-                  onMoodConfirmed={(score, mood) => {
-                    setEmotion(score);
-                    setMoodSource("camera");
-                    setCategoricalMood(mood);
-                  }} 
-                />
+                {isAuthenticated && (
+                  <FaceEmotionLauncher 
+                    onMoodConfirmed={(score, mood) => {
+                      setEmotion(score);
+                      setMoodSource("camera");
+                      setCategoricalMood(mood);
+                    }} 
+                  />
+                )}
                 {isAuthenticated && (
                   <Button
                     variant="outline"
