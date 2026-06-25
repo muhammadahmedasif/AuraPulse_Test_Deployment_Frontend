@@ -1,12 +1,14 @@
 "use client";
 
-import { Trash2, PhoneCall, User } from "lucide-react";
+import { Trash2, PhoneCall, User, MessageCircle } from "lucide-react";
 
 interface Contact {
   _id: string;
   name: string;
   relationship: string;
-  phone: string;
+  phone?: string;
+  whatsappNumber?: string;
+  preferredContactMethod?: "phone" | "whatsapp" | "both";
   priority: number;
   enabled: boolean;
 }
@@ -44,9 +46,19 @@ export function EmergencyContactCard({ contact, onDelete, onToggle }: Props) {
             </span>
           </div>
           
-          <div className="flex items-center gap-1.5 mt-1 opacity-70 text-sm">
-            <PhoneCall className="w-3.5 h-3.5" />
-            <span>{contact.phone}</span>
+          <div className="flex flex-col gap-1 mt-1 opacity-70 text-sm">
+            {(!contact.preferredContactMethod || contact.preferredContactMethod === "phone" || contact.preferredContactMethod === "both") && contact.phone && (
+              <div className="flex items-center gap-1.5">
+                <PhoneCall className="w-3.5 h-3.5" />
+                <span>{contact.phone}</span>
+              </div>
+            )}
+            {(contact.preferredContactMethod === "whatsapp" || contact.preferredContactMethod === "both") && contact.whatsappNumber && (
+              <div className="flex items-center gap-1.5">
+                <MessageCircle className="w-3.5 h-3.5 text-green-500" />
+                <span>{contact.whatsappNumber} (WhatsApp)</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

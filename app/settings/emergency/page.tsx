@@ -11,7 +11,9 @@ interface Contact {
   _id: string;
   name: string;
   relationship: string;
-  phone: string;
+  phone?: string;
+  whatsappNumber?: string;
+  preferredContactMethod?: "phone" | "whatsapp" | "both";
   priority: number;
   enabled: boolean;
 }

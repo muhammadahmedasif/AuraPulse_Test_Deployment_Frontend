@@ -8,7 +8,9 @@ import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 interface ContactPayload {
   name: string;
   relationship: string;
-  phone: string;
+  phone?: string;
+  whatsappNumber?: string;
+  preferredContactMethod: "phone" | "whatsapp" | "both";
   priority: number;
   enabled: boolean;
 }
@@ -21,7 +23,9 @@ interface Props {
 export function AddContactModal({ onAdd, onClose }: Props) {
   const [name, setName] = useState("");
   const [relationship, setRelationship] = useState("");
+  const [preferredContactMethod, setPreferredContactMethod] = useState<"phone" | "whatsapp" | "both">("phone");
   const [phone, setPhone] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,13 +38,21 @@ export function AddContactModal({ onAdd, onClose }: Props) {
       return;
     }
 
-    if (!phone) {
-      setError("Emergency contact number is required.");
+    if ((preferredContactMethod === "phone" || preferredContactMethod === "both") && !phone) {
+      setError("Phone number is required for emergency calls.");
+      return;
+    }
+    if ((preferredContactMethod === "phone" || preferredContactMethod === "both") && phone && !isValidPhoneNumber(phone)) {
+      setError("Please enter a valid phone number.");
       return;
     }
 
-    if (!isValidPhoneNumber(phone)) {
-      setError("Please enter a valid phone number.");
+    if ((preferredContactMethod === "whatsapp" || preferredContactMethod === "both") && !whatsappNumber) {
+      setError("WhatsApp number is required for WhatsApp notifications.");
+      return;
+    }
+    if ((preferredContactMethod === "whatsapp" || preferredContactMethod === "both") && whatsappNumber && !isValidPhoneNumber(whatsappNumber)) {
+      setError("Please enter a valid WhatsApp number.");
       return;
     }
 
@@ -49,7 +61,9 @@ export function AddContactModal({ onAdd, onClose }: Props) {
       await onAdd({
         name: name.trim(),
         relationship: relationship.trim(),
-        phone: phone.trim(),
+        preferredContactMethod,
+        phone: phone.trim() || undefined,
+        whatsappNumber: whatsappNumber.trim() || undefined,
         priority: 1,
         enabled: true,
       });
@@ -111,42 +125,91 @@ export function AddContactModal({ onAdd, onClose }: Props) {
             </div>
           </div>
 
+          {/* Method Selection Segmented Control */}
           <div>
-            <label className="block text-sm font-medium mb-1.5 opacity-80">Phone Number</label>
-            <div 
-              className="w-full px-4 py-2.5 rounded-xl border focus-within:ring-2 transition-shadow phone-input-wrapper"
-              style={{ background: "var(--card)", borderColor: "var(--border)", outlineColor: "var(--accent)" }}
-            >
-              <PhoneInput
-                placeholder="Enter phone number"
-                value={phone}
-                onChange={(val: string | undefined) => setPhone(val || "")}
-                international
-                defaultCountry="US"
-                className="phone-input-field"
-              />
+            <label className="block text-sm font-medium mb-1.5 opacity-80">Preferred Emergency Method</label>
+            <div className="flex p-1 rounded-xl" style={{ background: "var(--card)", border: "1px solid var(--border)" }}>
+              {(["phone", "whatsapp", "both"] as const).map((method) => (
+                <button
+                  key={method}
+                  type="button"
+                  onClick={() => setPreferredContactMethod(method)}
+                  className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                    preferredContactMethod === method
+                      ? "shadow-sm"
+                      : "opacity-60 hover:opacity-100"
+                  }`}
+                  style={{
+                    background: preferredContactMethod === method ? "var(--bg)" : "transparent",
+                    color: preferredContactMethod === method ? "var(--accent)" : "inherit"
+                  }}
+                >
+                  {method === "phone" ? "Phone Call" : method === "whatsapp" ? "WhatsApp" : "Both"}
+                </button>
+              ))}
             </div>
-            <style jsx global>{`
-              .phone-input-wrapper .PhoneInput {
-                display: flex;
-                align-items: center;
-              }
-              .phone-input-wrapper .PhoneInputCountry {
-                margin-right: 12px;
-              }
-              .phone-input-wrapper .PhoneInputInput {
-                border: none;
-                background: transparent;
-                outline: none;
-                flex: 1;
-                color: var(--text);
-                font-size: 1rem;
-              }
-              .phone-input-wrapper .PhoneInputCountrySelectArrow {
-                opacity: 0.5;
-              }
-            `}</style>
           </div>
+
+          {/* Phone Input */}
+          {(preferredContactMethod === "phone" || preferredContactMethod === "both") && (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 opacity-80">Phone Number (Voice Calls)</label>
+              <div 
+                className="w-full px-4 py-2.5 rounded-xl border focus-within:ring-2 transition-shadow phone-input-wrapper"
+                style={{ background: "var(--card)", borderColor: "var(--border)", outlineColor: "var(--accent)" }}
+              >
+                <PhoneInput
+                  placeholder="Enter phone number"
+                  value={phone}
+                  onChange={(val: string | undefined) => setPhone(val || "")}
+                  international
+                  defaultCountry="US"
+                  className="phone-input-field"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* WhatsApp Input */}
+          {(preferredContactMethod === "whatsapp" || preferredContactMethod === "both") && (
+            <div>
+              <label className="block text-sm font-medium mb-1.5 opacity-80">WhatsApp Number</label>
+              <div 
+                className="w-full px-4 py-2.5 rounded-xl border focus-within:ring-2 transition-shadow phone-input-wrapper"
+                style={{ background: "var(--card)", borderColor: "var(--border)", outlineColor: "var(--accent)" }}
+              >
+                <PhoneInput
+                  placeholder="Enter WhatsApp number"
+                  value={whatsappNumber}
+                  onChange={(val: string | undefined) => setWhatsappNumber(val || "")}
+                  international
+                  defaultCountry="US"
+                  className="phone-input-field"
+                />
+              </div>
+            </div>
+          )}
+
+          <style jsx global>{`
+            .phone-input-wrapper .PhoneInput {
+              display: flex;
+              align-items: center;
+            }
+            .phone-input-wrapper .PhoneInputCountry {
+              margin-right: 12px;
+            }
+            .phone-input-wrapper .PhoneInputInput {
+              border: none;
+              background: transparent;
+              outline: none;
+              flex: 1;
+              color: var(--text);
+              font-size: 1rem;
+            }
+            .phone-input-wrapper .PhoneInputCountrySelectArrow {
+              opacity: 0.5;
+            }
+          `}</style>
 
           <div className="flex gap-3 pt-4">
             <button 
