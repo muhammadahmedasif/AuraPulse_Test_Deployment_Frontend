@@ -106,8 +106,6 @@ export default function EmergencySettingsPage() {
     } catch { showToast("Failed to update setting", "err"); setAutoCallEnabled(!enabled); }
   };
 
-
-
   const handleAddContact = async (data: Omit<Contact, "_id">) => {
     try {
       const res = await apiFetch("/api/emergency/contacts", {
@@ -116,7 +114,7 @@ export default function EmergencySettingsPage() {
       });
       setContacts(res.contacts);
       setShowAddModal(false);
-      showToast(`${data.name} added as an emergency contact.`);
+      showToast("Emergency contact saved successfully.");
     } catch (err: any) { showToast(err.message || "Failed to add contact", "err"); }
   };
 
@@ -124,7 +122,7 @@ export default function EmergencySettingsPage() {
     try {
       const res = await apiFetch(`/api/emergency/contacts/${contactId}`, { method: "DELETE" });
       setContacts(res.contacts);
-      showToast(`${name} removed.`);
+      showToast("Emergency contact deleted successfully.");
     } catch { showToast("Failed to remove contact", "err"); }
   };
 
@@ -135,6 +133,7 @@ export default function EmergencySettingsPage() {
         body: JSON.stringify({ enabled }),
       });
       setContacts(res.contacts);
+      showToast("Emergency contact updated successfully.");
     } catch { showToast("Failed to update contact", "err"); }
   };
 
@@ -229,7 +228,7 @@ export default function EmergencySettingsPage() {
         </section>
 
         {/* ── Step 2: Contacts ── */}
-        <section className="rounded-2xl p-5 border space-y-4" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
+        <section className="rounded-2xl p-5 border space-y-4 shadow-sm" style={{ borderColor: "var(--border)", background: "var(--card)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold
@@ -295,8 +294,6 @@ export default function EmergencySettingsPage() {
             </button>
           </div>
         </section>
-
-
 
         {/* ── Cooldown status ── */}
         {status?.onCooldown && status.cooldownExpiresAt && (

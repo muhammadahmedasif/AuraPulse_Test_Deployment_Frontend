@@ -20,8 +20,8 @@ interface Props {
 export function EmergencyContactCard({ contact, onDelete, onToggle }: Props) {
   return (
     <div 
-      className={`p-4 rounded-xl border flex items-center justify-between transition-colors ${
-        contact.enabled ? "opacity-100" : "opacity-60 grayscale-[50%]"
+      className={`p-4 rounded-xl border flex items-center justify-between transition-all hover:shadow-md ${
+        contact.enabled ? "opacity-100 bg-white dark:bg-gray-800/50" : "opacity-60 bg-gray-50 dark:bg-gray-900"
       }`}
       style={{ borderColor: "var(--border)", background: "var(--bg)" }}
     >
@@ -35,10 +35,10 @@ export function EmergencyContactCard({ contact, onDelete, onToggle }: Props) {
         
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-sm">{contact.name}</h3>
+            <h3 className="font-bold text-sm tracking-tight">{contact.name}</h3>
             <span 
-              className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-medium"
-              style={{ background: "var(--border)" }}
+              className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider font-bold"
+              style={{ background: "var(--border)", color: "var(--text)" }}
             >
               {contact.relationship}
             </span>
@@ -68,7 +68,7 @@ export function EmergencyContactCard({ contact, onDelete, onToggle }: Props) {
         
         <button 
           onClick={onDelete}
-          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ml-2"
           title="Delete contact"
         >
           <Trash2 className="w-4 h-4" />

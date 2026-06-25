@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, Phone, User, Heart } from "lucide-react";
+import { X, User, Heart } from "lucide-react";
+import "react-phone-number-input/style.css";
+import PhoneInput, { isValidPhoneNumber } from "react-phone-number-input";
 
 interface ContactPayload {
   name: string;
@@ -27,13 +29,18 @@ export function AddContactModal({ onAdd, onClose }: Props) {
     e.preventDefault();
     setError("");
 
-    if (!name.trim() || !relationship.trim() || !phone.trim()) {
-      setError("Please fill in all fields");
+    if (!name.trim() || !relationship.trim()) {
+      setError("Please fill in all fields.");
       return;
     }
 
-    if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
-      setError("Phone must be in E.164 format (e.g. +923001234567)");
+    if (!phone) {
+      setError("Emergency contact number is required.");
+      return;
+    }
+
+    if (!isValidPhoneNumber(phone)) {
+      setError("Please enter a valid phone number.");
       return;
     }
 
@@ -105,19 +112,40 @@ export function AddContactModal({ onAdd, onClose }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5 opacity-80">Phone Number (International)</label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-40" />
-              <input
-                type="tel"
+            <label className="block text-sm font-medium mb-1.5 opacity-80">Phone Number</label>
+            <div 
+              className="w-full px-4 py-2.5 rounded-xl border focus-within:ring-2 transition-shadow phone-input-wrapper"
+              style={{ background: "var(--card)", borderColor: "var(--border)", outlineColor: "var(--accent)" }}
+            >
+              <PhoneInput
+                placeholder="Enter phone number"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1234567890"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border focus:outline-none focus:ring-2 transition-shadow"
-                style={{ background: "var(--card)", borderColor: "var(--border)", outlineColor: "var(--accent)" }}
+                onChange={(val: string | undefined) => setPhone(val || "")}
+                international
+                defaultCountry="US"
+                className="phone-input-field"
               />
             </div>
-            <p className="text-xs opacity-50 mt-1.5 ml-1">Must include country code, e.g. +923001234567</p>
+            <style jsx global>{`
+              .phone-input-wrapper .PhoneInput {
+                display: flex;
+                align-items: center;
+              }
+              .phone-input-wrapper .PhoneInputCountry {
+                margin-right: 12px;
+              }
+              .phone-input-wrapper .PhoneInputInput {
+                border: none;
+                background: transparent;
+                outline: none;
+                flex: 1;
+                color: var(--text);
+                font-size: 1rem;
+              }
+              .phone-input-wrapper .PhoneInputCountrySelectArrow {
+                opacity: 0.5;
+              }
+            `}</style>
           </div>
 
           <div className="flex gap-3 pt-4">

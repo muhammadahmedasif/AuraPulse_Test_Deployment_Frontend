@@ -57,16 +57,9 @@ export function useFaceEmotion() {
     try {
       const result = detectLandmarks(videoRef.current);
       if (result) {
-        // 2. Feature Extraction (Directly from Blendshapes)
         const rawFeatures = extractFeatures(result.landmarks, result.blendshapes);
-
-        // 3. Score calculation
         const rawScore = calculateRawScore(rawFeatures);
-        
-        // 4. EWMA temporal step to kill camera noise
         const ewmaScore = applyTemporalSmoothingStep(rawScore);
-
-        // 5. Advanced Smoothing (Spike rejection, Rolling Window, Stability)
         const { smoothedScore, isStable: stableNow } = smoothingEngineRef.current.processScore(ewmaScore, result.timestamp);
         
         if (!isStableRef.current) {
@@ -83,10 +76,7 @@ export function useFaceEmotion() {
       console.error("Frame processing error:", e);
     }
 
-    // ~20 FPS throttle using requestAnimationFrame loop
-    // In a strict implementation we might use setTimeout but rAF is better for battery
-    // We can throttle it slightly by doing it every 2nd frame roughly, but for now standard rAF is ~60fps
-    // Let's manually throttle to ~20 FPS.
+    // Throttle to ~20 FPS
     await new Promise(r => setTimeout(r, 50)); 
     animationFrameRef.current = requestAnimationFrame(processFrame);
   }, []);

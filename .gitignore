@@ -40,6 +40,10 @@ structuree.md
 /prerun.sh
 /postrun.sh
 # debug
+*.log
+logs/
+debug.log
+*.tmp
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

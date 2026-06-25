@@ -35,7 +35,7 @@ export function AutoMoodDetector({
   const callbackRef = useRef(onMoodShiftDetected);
   callbackRef.current = onMoodShiftDetected;
 
-  // ── Camera helpers ──
+  // Initialize and open camera
   const openCamera = useCallback(async (): Promise<boolean> => {
     try {
       if (!videoRef.current) return false;
@@ -58,7 +58,6 @@ export function AutoMoodDetector({
       await videoRef.current.play().catch(() => { });
       return true;
     } catch (err) {
-      console.error("[AutoMood] Camera error:", err);
       return false;
     }
   }, []);
@@ -77,10 +76,9 @@ export function AutoMoodDetector({
     }
     dispose();
     isRunningRef.current = false;
-    console.log("[AutoMood] Camera closed");
   }, []);
 
-  // ── Single mood-check cycle ──
+  // Execute a single mood check cycle
   const runMoodCheck = useCallback(async () => {
     if (isRunningRef.current) return;
     isRunningRef.current = true;
@@ -111,7 +109,6 @@ export function AutoMoodDetector({
 
           const now = performance.now();
           if (now - startTime > maxDuration) {
-            console.log("[AutoMood] Timeout reaching stable score.");
             resolve();
             return;
           }
@@ -119,8 +116,7 @@ export function AutoMoodDetector({
           const result = detectLandmarks(videoRef.current);
           if (result) {
             const rawFeatures = extractFeatures(result.landmarks, result.blendshapes);
-            // Skipping calibration here for background checks, or assuming neutral baseline.
-            // Using raw features directly for background checks is acceptable.
+            // Skip calibration for background checks, assume neutral baseline
             const rawScore = calculateRawScore(rawFeatures);
             const { smoothedScore, isStable } = smoothingEngine.processScore(rawScore, result.timestamp);
 
@@ -142,8 +138,6 @@ export function AutoMoodDetector({
         const avg = Math.max(0, Math.min(100, Math.round(finalAvgScore)));
         const mood = getMoodCategory(avg);
 
-        console.log(`[AutoMood] 🎯 Final: score=${avg}, mood=${mood}`);
-
         lastMoodRef.current = mood;
         toastRef.current({
           title: "🎭 Auto Mood Detected",
@@ -151,12 +145,10 @@ export function AutoMoodDetector({
           duration: 4000,
         });
         callbackRef.current(avg, mood);
-      } else {
-        console.log(`[AutoMood] Could not get a stable reading.`);
       }
 
     } catch (err) {
-      console.error("[AutoMood] runMoodCheck error:", err);
+      // Ignore errors silently in background
     } finally {
       closeCamera();
     }
@@ -164,14 +156,11 @@ export function AutoMoodDetector({
 
   useEffect(() => {
     if (!isActive) {
-      console.log("[AutoMood] Toggle OFF");
       closeCamera();
       if (checkTimerRef.current) { clearTimeout(checkTimerRef.current); checkTimerRef.current = null; }
       if (checkIntervalRef.current) { clearInterval(checkIntervalRef.current); checkIntervalRef.current = null; }
       return;
     }
-
-    console.log(`[AutoMood] Toggle ON — first check in 3 s, then every ${intervalMinutes} min`);
 
     checkTimerRef.current = setTimeout(() => {
       runMoodCheck();

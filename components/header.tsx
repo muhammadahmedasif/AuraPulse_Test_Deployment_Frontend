@@ -192,7 +192,7 @@ export function Header() {
       <header ref={menuRef} className="relative max-w-screen-2xl mx-auto px-4 md:px-20">
         <div className="flex h-16 items-center justify-between">
 
-          {/* LOGO */}
+          {/* Navigation Brand */}
           <Link href="/" className="flex items-center space-x-2 transition-opacity hover:opacity-80">
             <AudioWaveform className="h-7 w-7 text-primary animate-pulse-gentle" />
             <div className="flex flex-col">
@@ -205,13 +205,13 @@ export function Header() {
             </div>
           </Link>
 
-          {/* RIGHT */}
+          {/* Right Navigation */}
           <div className="flex items-center gap-4">
 
-            {/* DESKTOP NAV */}
+            {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-1">
 
-              {/* FEATURES + ABOUT (RESTORED UNDERLINE) */}
+              {/* Core Links */}
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -223,7 +223,7 @@ export function Header() {
                 </Link>
               ))}
 
-              {/* PROFILE (UNDERLINE RESTORED) */}
+              {/* Profile Link */}
               {isAuthenticated && (
                 <Link
                   href="/profile"
@@ -244,7 +244,7 @@ export function Header() {
                 </Link>
               )}
 
-              {/* EMERGENCY SETTINGS (DESKTOP) */}
+              {/* Emergency Link */}
               {isAuthenticated && (
                 <Link
                   href="/settings/emergency"
@@ -259,7 +259,7 @@ export function Header() {
 
             <ThemeToggle />
 
-            {/* USER NOTIFICATIONS */}
+            {/* Notifications */}
             {isAuthenticated && (
               <div className="relative" ref={notifDropdownRef}>
                 <Button
@@ -351,7 +351,7 @@ export function Header() {
               </div>
             )}
 
-            {/* AUTH */}
+            {/* Auth Controls */}
             {isAuthenticated ? (
               <>
                 <Button asChild className="hidden md:flex gap-2 bg-primary/90 hover:bg-primary">
@@ -374,7 +374,7 @@ export function Header() {
               <SignInButton />
             )}
 
-            {/* MOBILE TOGGLE */}
+            {/* Mobile Menu Toggle */}
             <Button
               variant="ghost"
               size="icon"
@@ -386,12 +386,12 @@ export function Header() {
           </div>
         </div>
 
-        {/* MOBILE MENU */}
+        {/* Mobile Navigation Menu */}
         {isMenuOpen && (
           <div className="md:hidden border-t border-primary/10 max-h-[calc(100vh-4rem)] overflow-y-auto">
             <nav className="flex flex-col space-y-1 py-4">
 
-              {/* FEATURES + ABOUT (NO UNDERLINE NEEDED MOBILE STYLE) */}
+              {/* Core Links */}
               {navItems.map((item) => (
                 <Link
                   key={item.href}
@@ -403,7 +403,7 @@ export function Header() {
                 </Link>
               ))}
 
-              {/* DASHBOARD */}
+              {/* Dashboard Link */}
               {isAuthenticated && (
                 <Link
                   href="/dashboard"
@@ -415,7 +415,7 @@ export function Header() {
                 </Link>
               )}
 
-              {/* PROFILE (FIXED IMAGE + CLEAN UI) */}
+              {/* Profile Link */}
               {isAuthenticated && (
                 <Link
                   href="/profile"
@@ -435,7 +435,7 @@ export function Header() {
                 </Link>
               )}
 
-              {/* EMERGENCY SETTINGS (MOBILE) */}
+              {/* Emergency Link */}
               {isAuthenticated && (
                 <Link
                   href="/settings/emergency"
@@ -447,7 +447,7 @@ export function Header() {
                 </Link>
               )}
 
-              {/* SIGNOUT (FIXED ALIGNMENT) */}
+              {/* Sign Out Button */}
               {isAuthenticated && (
                 <button
                   onClick={() => {
