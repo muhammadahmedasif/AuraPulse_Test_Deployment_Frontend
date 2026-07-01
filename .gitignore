@@ -85,3 +85,28 @@ ignition/deployments/chain-31337
 
 # Private keys
 secrete.txt
+
+# --- ADDED BY AUDIT ---
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Cache & Build
+.cache/
+dist/
+build/
+.vercel/
+
+# DB
+*.sqlite
+*.sqlite3
+*.db
+
+# Keep environment examples
+!.env.example

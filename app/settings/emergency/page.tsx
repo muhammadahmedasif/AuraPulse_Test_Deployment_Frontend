@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Shield, Phone, Plus, AlertTriangle, CheckCircle2, Clock, ChevronRight } from "lucide-react";
 import { ConsentModal } from "@/components/emergency/ConsentModal";
 import { AddContactModal } from "@/components/emergency/AddContactModal";
+import { EditContactModal } from "@/components/emergency/EditContactModal";
 import { EmergencyContactCard } from "@/components/emergency/EmergencyContactCard";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -58,6 +59,8 @@ export default function EmergencySettingsPage() {
   const [autoCallEnabled, setAutoCallEnabled] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingContact, setEditingContact] = useState<Contact | null>(null);
+  const [testCallLoadingId, setTestCallLoadingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
 
   const showToast = (msg: string, type: "ok" | "err" = "ok") => {
@@ -118,6 +121,33 @@ export default function EmergencySettingsPage() {
       setShowAddModal(false);
       showToast("Emergency contact saved successfully.");
     } catch (err: any) { showToast(err.message || "Failed to add contact", "err"); }
+  };
+
+  const handleEditContact = async (contactId: string, data: Omit<Contact, "_id">) => {
+    try {
+      const res = await apiFetch(`/api/emergency/contacts/${contactId}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      });
+      setContacts(res.contacts);
+      setEditingContact(null);
+      showToast("Emergency contact updated successfully.");
+    } catch (err: any) { showToast(err.message || "Failed to update contact", "err"); }
+  };
+
+  const handleTestCall = async (contactId: string) => {
+    setTestCallLoadingId(contactId);
+    try {
+      const res = await apiFetch("/api/emergency/test-call", {
+        method: "POST",
+        body: JSON.stringify({ contactId }),
+      });
+      showToast(res.message || "Test call initiated successfully.");
+    } catch (err: any) {
+      showToast(err.message || "Failed to initiate test call", "err");
+    } finally {
+      setTestCallLoadingId(null);
+    }
   };
 
   const handleDeleteContact = async (contactId: string, name: string) => {
@@ -269,6 +299,9 @@ export default function EmergencySettingsPage() {
                   contact={c}
                   onDelete={() => handleDeleteContact(c._id, c.name)}
                   onToggle={(enabled) => handleToggleContact(c._id, enabled)}
+                  onEdit={() => setEditingContact(c)}
+                  onTestCall={() => handleTestCall(c._id)}
+                  testCallLoading={testCallLoadingId === c._id}
                 />
               ))}
             </div>
@@ -327,6 +360,13 @@ export default function EmergencySettingsPage() {
       )}
       {showAddModal && (
         <AddContactModal onAdd={handleAddContact} onClose={() => setShowAddModal(false)} />
+      )}
+      {editingContact && (
+        <EditContactModal
+          initialData={editingContact}
+          onEdit={(data) => handleEditContact(editingContact._id, data)}
+          onClose={() => setEditingContact(null)}
+        />
       )}
     </div>
   );

@@ -17,9 +17,12 @@ interface Props {
   contact: Contact;
   onDelete: () => void;
   onToggle: (enabled: boolean) => void;
+  onEdit: () => void;
+  onTestCall: () => void;
+  testCallLoading?: boolean;
 }
 
-export function EmergencyContactCard({ contact, onDelete, onToggle }: Props) {
+export function EmergencyContactCard({ contact, onDelete, onToggle, onEdit, onTestCall, testCallLoading }: Props) {
   return (
     <div 
       className={`p-4 rounded-xl border flex items-center justify-between transition-all hover:shadow-md ${
@@ -63,7 +66,27 @@ export function EmergencyContactCard({ contact, onDelete, onToggle }: Props) {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onTestCall}
+          disabled={testCallLoading || !contact.enabled}
+          className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
+            contact.enabled
+              ? "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800"
+          }`}
+          title="Send a test emergency call"
+        >
+          {testCallLoading ? "Calling..." : "Test Call"}
+        </button>
+        
+        <button
+          onClick={onEdit}
+          className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+          title="Edit contact"
+        >
+          Edit
+        </button>
         <button
           onClick={() => onToggle(!contact.enabled)}
           className={`relative w-9 h-5 rounded-full transition-colors ${
