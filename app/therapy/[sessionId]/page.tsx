@@ -672,10 +672,11 @@ export default function TherapyPage() {
         
         {/* Sidebar with chat history */}
         <div className={cn(
-          "fixed inset-y-0 left-0 z-40 w-80 bg-background border-r flex flex-col transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:bg-muted/30 pt-16 lg:pt-0",
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-40 w-80 bg-background border-r flex flex-col transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:bg-muted/30 lg:pt-0",
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full",
+          "pt-16"
         )}>
-          <div className="p-4 border-b">
+          <div className="p-4 border-b shrink-0">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Chat Sessions</h2>
               <Button
@@ -707,8 +708,8 @@ export default function TherapyPage() {
             </Button>
           </div>
 
-          <ScrollArea className="flex-1 p-4">
-            <div className="space-y-4">
+          <div className="flex-1 min-h-0 p-4">
+            <div className="h-full overflow-y-auto space-y-4">
               {sessions.map((session) => (
                 <div
                   key={session.sessionId}
@@ -720,32 +721,32 @@ export default function TherapyPage() {
                   )}
                   onClick={() => handleSessionSelect(session.sessionId)}
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4" />
-                      <span className="font-medium">
+                  <div className="flex items-center justify-between gap-2 mb-1 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                      <MessageSquare className="w-4 h-4 shrink-0" />
+                      <span className="font-medium truncate">
                         {session.title || (session.messages && session.messages[0] ? session.messages[0].content.slice(0, 30) : "New Chat")}
                       </span>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
                       onClick={(e) => handleDeleteSession(e, session.sessionId)}
                       title="Delete session"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="line-clamp-2 text-muted-foreground">
+                  <p className="line-clamp-2 text-muted-foreground break-words">
                     {session.messages[session.messages.length - 1]?.content ||
                       "No messages yet"}
                   </p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between mt-2 min-w-0 gap-2">
+                    <span className="text-xs text-muted-foreground shrink-0">
                       {session.messageCount || 0} messages
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground shrink-0">
                       {formatDistanceToNow(new Date(session.updatedAt), {
                         addSuffix: true,
                       })}
@@ -754,7 +755,7 @@ export default function TherapyPage() {
                 </div>
               ))}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Main chat area */}
@@ -887,7 +888,7 @@ export default function TherapyPage() {
                         )}
                       >
                         <div className={cn(
-                          "flex max-w-[85%] sm:max-w-[75%] gap-3",
+                          "flex max-w-[85%] sm:max-w-[75%] gap-3 min-w-0",
                           isAssistant ? "flex-row" : "flex-row-reverse"
                         )}>
                           {/* Avatar */}
@@ -912,15 +913,15 @@ export default function TherapyPage() {
                           </div>
 
                           {/* Message Bubble */}
-                          <div className="space-y-1 flex flex-col">
+                          <div className="space-y-1 flex flex-col min-w-0 w-full">
                             <div className={cn(
-                              "p-4 rounded-2xl shadow-sm",
+                              "p-4 rounded-2xl shadow-sm min-w-0 break-words",
                               isAssistant 
                                 ? "bg-muted/50 text-foreground rounded-tl-none border border-muted" 
                                 : "bg-primary text-primary-foreground rounded-tr-none"
                             )}>
                               <div className={cn(
-                                "prose prose-sm leading-relaxed",
+                                "prose prose-sm leading-relaxed min-w-0 break-words",
                                 isAssistant ? "dark:prose-invert" : "prose-invert"
                               )}>
                                 <ReactMarkdown>{msg.content}</ReactMarkdown>

@@ -21,7 +21,7 @@ export function SpotifyCard({ playlists, reason }: SpotifyCardProps) {
   if (!playlists || playlists.length === 0) return null;
 
   return (
-    <div className="mt-4 p-4 rounded-2xl border border-white/10 bg-gradient-to-br from-[#181818] to-[#121212] shadow-2xl relative overflow-hidden w-full">
+    <div className="mt-4 p-4 rounded-2xl border border-white/10 bg-gradient-to-br from-[#181818] to-[#121212] shadow-2xl relative overflow-hidden w-full min-w-0">
       {/* Decorative ambient glow */}
       <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 h-32 rounded-full bg-[#1DB954]/10 blur-3xl pointer-events-none" />
 
@@ -38,14 +38,14 @@ export function SpotifyCard({ playlists, reason }: SpotifyCardProps) {
         </p>
       )}
 
-      <div className="space-y-2 relative z-10">
+      <div className="space-y-2 relative z-10 min-w-0">
         {playlists.map((playlist) => (
           <a
             key={playlist.id}
             href={playlist.spotifyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-3 p-2.5 rounded-xl bg-[#282828]/50 hover:bg-[#282828] transition-colors group cursor-pointer w-full overflow-hidden"
+            className="flex items-center gap-3 p-2.5 rounded-xl bg-[#282828]/50 hover:bg-[#282828] transition-colors group cursor-pointer w-full overflow-hidden min-w-0"
           >
             {/* Album art */}
             <div className="relative w-11 h-11 rounded-md overflow-hidden shrink-0 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
