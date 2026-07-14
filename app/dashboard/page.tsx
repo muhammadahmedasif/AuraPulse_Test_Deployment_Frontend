@@ -44,6 +44,7 @@ import { BreathingGame } from "@/components/games/breathing-game";
 import { ZenGarden } from "@/components/games/zen-garden";
 import { ForestGame } from "@/components/games/forest-game";
 import { OceanWaves } from "@/components/games/ocean-waves";
+import { DashboardMusic } from "@/components/music/dashboard-music";
 
 import {
   getActivityHistory,
@@ -1008,9 +1009,14 @@ export default function Dashboard() {
           {/* Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left side - Spans 2 columns */}
-            <div className="lg:col-span-3 space-y-6">
-              {/* Anxiety Games - Now directly below Fitbit */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Anxiety Games */}
               <AnxietyGames onGamePlayed={handleGamePlayed} />
+            </div>
+
+            {/* Right side - Spans 1 column */}
+            <div className="lg:col-span-1 space-y-6">
+              <DashboardMusic />
             </div>
           </div>
         </div>

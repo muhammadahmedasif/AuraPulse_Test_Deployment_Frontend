@@ -9,8 +9,12 @@ export interface MessageAnalysis {
 export interface EmotionMeta {
   emotion: "panic" | "stress" | "low" | "neutral" | "positive";
   intensity: number;
-  suggestedActivity: "breathing" | "ocean" | "forest" | "zen" | null;
+  suggestedActivity: "breathing" | "ocean" | "forest" | "zen" | "rain" | "campfire" | null;
   autoTrigger: boolean;
+  musicRecommendation?: {
+    mood: string;
+    reason: string;
+  } | null;
 }
 
 export interface ChatMessage {
@@ -26,6 +30,7 @@ export interface ChatMessage {
       riskLevel?: number;
     };
     emotionMeta?: EmotionMeta;
+    spotifyRecommendations?: any[];
   };
 }
 
@@ -51,6 +56,7 @@ export interface SendMessageResponse {
       riskLevel?: number;
     };
     emotionMeta?: EmotionMeta;
+    spotifyRecommendations?: any[];
   };
 }
 

@@ -33,6 +33,9 @@ import { BreathingGame } from "@/components/games/breathing-game";
 import { ZenGarden } from "@/components/games/zen-garden";
 import { ForestGame } from "@/components/games/forest-game";
 import { OceanWaves } from "@/components/games/ocean-waves";
+import { RainGame } from "@/components/games/rain-game";
+import { CampfireGame } from "@/components/games/campfire-game";
+import { SpotifyCard } from "@/components/music/spotify-card";
 import { Badge } from "@/components/ui/badge";
 import {
   createChatSession,
@@ -61,7 +64,7 @@ interface SuggestedQuestion {
 interface StressPrompt {
   trigger: string;
   activity: {
-    type: "breathing" | "garden" | "forest" | "waves";
+    type: "breathing" | "garden" | "forest" | "waves" | "rain" | "campfire";
     title: string;
     description: string;
   };
@@ -399,7 +402,7 @@ export default function TherapyPage() {
             });
             scrollToBottom();
           } else if (data.t === "done") {
-            // Finalize message with metadata
+            // Finalize message with metadata (including Spotify recommendations)
             setMessages((prev) => {
               const newMessages = [...prev];
               const lastMessage = newMessages[newMessages.length - 1];
@@ -412,6 +415,7 @@ export default function TherapyPage() {
                     goal: data.metadata?.currentGoal || "Provide support",
                     progress: data.metadata?.progress,
                     emotionMeta: data.metadata?.emotionMeta,
+                    spotifyRecommendations: data.metadata?.spotifyRecommendations || undefined,
                   },
                 };
               }
@@ -479,10 +483,10 @@ export default function TherapyPage() {
   }
 
   const handleActivityTrigger = (
-    activityType: "breathing" | "ocean" | "forest" | "zen",
+    activityType: "breathing" | "ocean" | "forest" | "zen" | "rain" | "campfire",
     triggerReason: string = "support"
   ) => {
-    let type: "breathing" | "garden" | "forest" | "waves" = "breathing";
+    let type: "breathing" | "garden" | "forest" | "waves" | "rain" | "campfire" = "breathing";
     let title = "Calming Activity";
     let description = "Take a moment to center yourself";
 
@@ -506,6 +510,16 @@ export default function TherapyPage() {
         type = "garden";
         title = "Zen Garden";
         description = "Create and maintain your digital peaceful space";
+        break;
+      case "rain":
+        type = "rain";
+        title = "Gentle Rain";
+        description = "Drift into calm with the soothing sound of rainfall";
+        break;
+      case "campfire":
+        type = "campfire";
+        title = "Campfire Night";
+        description = "Unwind by a crackling fire under a starry sky";
         break;
     }
 
@@ -926,13 +940,23 @@ export default function TherapyPage() {
                                       onClick={() => handleActivityTrigger(msg.metadata?.emotionMeta?.suggestedActivity as any, msg.metadata?.emotionMeta?.emotion)}
                                    >
                                       Start {
-                                        msg.metadata.emotionMeta.suggestedActivity === 'zen' ? 'Zen Garden' :
-                                        msg.metadata.emotionMeta.suggestedActivity === 'forest' ? 'Forest Walk' :
-                                        msg.metadata.emotionMeta.suggestedActivity === 'ocean' ? 'Ocean Waves' :
+                                        (msg.metadata.emotionMeta.suggestedActivity as string) === 'zen' ? 'Zen Garden' :
+                                        (msg.metadata.emotionMeta.suggestedActivity as string) === 'forest' ? 'Forest Walk' :
+                                        (msg.metadata.emotionMeta.suggestedActivity as string) === 'ocean' ? 'Ocean Waves' :
+                                        (msg.metadata.emotionMeta.suggestedActivity as string) === 'rain' ? 'Gentle Rain' :
+                                        (msg.metadata.emotionMeta.suggestedActivity as string) === 'campfire' ? 'Campfire Night' :
                                         'Breathing'
                                       }
                                    </Button>
                                 </div>
+                              )}
+
+                              {/* Spotify Music Recommendations */}
+                              {isAssistant && msg.metadata?.spotifyRecommendations && msg.metadata.spotifyRecommendations.length > 0 && (
+                                <SpotifyCard 
+                                  playlists={msg.metadata.spotifyRecommendations}
+                                  reason={msg.metadata?.emotionMeta ? `Suggested for your ${msg.metadata.emotionMeta.emotion} mood` : undefined}
+                                />
                               )}
                             </div>
 
@@ -1080,6 +1104,8 @@ export default function TherapyPage() {
               {stressPrompt.activity.type === "waves" && <OceanWaves />}
               {stressPrompt.activity.type === "forest" && <ForestGame />}
               {stressPrompt.activity.type === "garden" && <ZenGarden />}
+              {stressPrompt.activity.type === "rain" && <RainGame />}
+              {stressPrompt.activity.type === "campfire" && <CampfireGame />}
             </div>
           </div>
         </div>

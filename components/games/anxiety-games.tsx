@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Gamepad2, Flower2, Wind, TreePine, Waves, Music2 } from "lucide-react";
+import { Gamepad2, Flower2, Wind, TreePine, Waves, Music2, CloudRain, Flame } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -21,6 +21,8 @@ import { BreathingGame } from "./breathing-game";
 import { ZenGarden } from "./zen-garden";
 import { ForestGame } from "./forest-game";
 import { OceanWaves } from "./ocean-waves";
+import { RainGame } from "./rain-game";
+import { CampfireGame } from "./campfire-game";
 
 const games = [
   {
@@ -59,6 +61,24 @@ const games = [
     bgColor: "bg-cyan-500/10",
     duration: "8 mins",
   },
+  {
+    id: "rain",
+    title: "Gentle Rain",
+    description: "Drift into calm with the soothing sound of rainfall",
+    icon: CloudRain,
+    color: "text-indigo-500",
+    bgColor: "bg-indigo-500/10",
+    duration: "5 mins",
+  },
+  {
+    id: "campfire",
+    title: "Campfire Night",
+    description: "Unwind by a crackling fire under a starry sky",
+    icon: Flame,
+    color: "text-amber-500",
+    bgColor: "bg-amber-500/10",
+    duration: "5 mins",
+  },
 ];
 
 interface AnxietyGamesProps {
@@ -96,6 +116,10 @@ export const AnxietyGames = ({ onGamePlayed }: AnxietyGamesProps) => {
         return <ForestGame />;
       case "waves":
         return <OceanWaves />;
+      case "rain":
+        return <RainGame />;
+      case "campfire":
+        return <CampfireGame />;
       default:
         return null;
     }

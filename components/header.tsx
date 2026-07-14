@@ -290,7 +290,7 @@ export function Header() {
                       )}
                     </div>
 
-                    <div className="max-h-[320px] overflow-y-auto divide-y divide-primary/5">
+                    <div className="divide-y divide-primary/5">
                       {notifications.length === 0 ? (
                         <div className="text-center py-8 text-xs text-muted-foreground/60">
                           <CheckCircle2 className="w-8 h-8 text-primary/30 mx-auto mb-2" />
@@ -388,7 +388,7 @@ export function Header() {
 
         {/* Mobile Navigation Menu */}
         {isMenuOpen && (
-          <div className="md:hidden border-t border-primary/10 max-h-[calc(100vh-4rem)] overflow-y-auto">
+          <div className="md:hidden border-t border-primary/10">
             <nav className="flex flex-col space-y-1 py-4">
 
               {/* Core Links */}

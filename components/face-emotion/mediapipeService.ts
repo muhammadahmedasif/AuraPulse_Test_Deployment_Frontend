@@ -91,6 +91,8 @@ export function detectLandmarks(
     const result = landmarkerInstance.detectForVideo(video, ts);
     if (!result?.faceLandmarks?.length) return null;
 
+    console.log("Land Marks", result.faceLandmarks[0]);
+
     return {
       landmarks: result.faceLandmarks[0] as NormalizedLandmark[],
       blendshapes: result.faceBlendshapes?.[0]?.categories || [],
